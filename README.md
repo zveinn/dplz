@@ -20,9 +20,13 @@ $ go install .
 
 # How to get started
 1. [Define a server](#Defining-servers)
+    - Server files can be located anywhere you please
 2. [Define a deployment (optional)](#Defining-deployments)
+    - Deployment files can be located anywhere you please
 3. [Define variables](#Defining-variables)
+    - Variable files can be located anywhere you please
 4. [Define a script](#Defining-scripts)
+    - Script files need to be located within your project directory
 5. [Run a deployment](#Defining-a-server)
 
 # Running deployments 
