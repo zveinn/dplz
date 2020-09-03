@@ -1,0 +1,21 @@
+{
+    "hostname": "googlecloud-dev-01",
+    "ip": "131.161.181.11",
+    "port": "22",
+    "key": "/home/user/.ssh/ssh-key",
+    "user": "root",
+    "variables": {
+        "privateIP": "11.11.11.11",
+        "dns": "1.1.1.1"
+    },
+    "pre": [
+        {
+            "run": "echo 'This runs before all scripts'"
+        }
+    ],
+    "post": [
+        {
+            "run": "echo 'This runs after all script'"
+        }
+    ]
+}

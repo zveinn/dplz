@@ -1,0 +1,35 @@
+{
+    "name": "Basic deployment",
+    "filter": "basic",
+    "variables": {
+        "name": "Some random name",
+        "testVariable": "Here is some random text you can inject into a file..."
+    },
+    "cmd": [
+        {
+            "template": {
+                "local": "projects/dplz/files/webserver.template.conf",
+                "remote": "test.template"
+            },
+            "filter": "templates",
+            "async": true
+        },
+        {
+            "file": {
+                "local": "projects/dplz/files/webserver.template.conf",
+                "remote": "test.file"
+            },
+            "filter": "files",
+            "async": true
+        },
+        {
+            "run": "uname -a",
+            "filter": "uname",
+            "async": true
+        },
+        {
+            "run": "ls -la",
+            "filter": "list"
+        }
+    ]
+}
