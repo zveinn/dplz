@@ -5,6 +5,7 @@ Dplz is capable of running shell commands and copying any type of file or direct
  Right now this software is in beta, but I would love for anyone and everyone to try it out and flood me with issues to work on.
 
 # On the horizon
+0. Basic tests
 1. Localhost support
 2. More advanced filtering
 3. Verbose output mode
