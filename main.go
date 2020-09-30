@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/zkynetio/logger"
+	"github.com/opensourcez/logger"
 )
 
 func main() {
