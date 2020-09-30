@@ -71,7 +71,7 @@ func (c *CMD) CopyFile(server *Server) {
 func OpenSessionsAndRunCommands(server *Server) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.GenericError(logger.GetRecoverError(r)).Log()
+			logger.GenericError(logger.TypeCastRecoverInterface(r)).Log()
 		}
 	}()
 
@@ -146,7 +146,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 	defer func() {
 		if r := recover(); r != nil {
-			logger.GenericError(logger.GetRecoverError(r)).Log()
+			logger.GenericError(logger.TypeCastRecoverInterface(r)).Log()
 		}
 		cmd.Session.Close()
 		close(cmd.StdOut.Buffer)
