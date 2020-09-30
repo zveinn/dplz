@@ -33,7 +33,7 @@ func (c *CMD) CopyTemplate(server *Server) {
 		return
 	}
 
-	cmd := exec.Command("scp", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "/tmp/"+c.ID.String(), server.User+"@"+server.IP+":"+c.Template.Remote)
+	cmd := exec.Command("scp", "-r", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "/tmp/"+c.ID.String(), server.User+"@"+server.IP+":"+c.Template.Remote)
 	cmd.Stdout = &c.StdOut
 	cmd.Stderr = &c.StdErr
 	err = cmd.Run()
@@ -58,7 +58,7 @@ func (c *CMD) CopyTemplate(server *Server) {
 func (c *CMD) CopyFile(server *Server) {
 	c.ID = uuid.New()
 	c.Run = " FILE > " + c.File.Local
-	cmd := exec.Command("scp", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "-r", c.File.Local, server.User+"@"+server.IP+":"+c.File.Remote)
+	cmd := exec.Command("scp", "-r", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "-r", c.File.Local, server.User+"@"+server.IP+":"+c.File.Remote)
 	cmd.Stdout = &c.StdOut
 	cmd.Stderr = &c.StdErr
 	err := cmd.Run()
