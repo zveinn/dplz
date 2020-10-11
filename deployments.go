@@ -33,7 +33,7 @@ func (c *CMD) CopyTemplate(server *Server) {
 		return
 	}
 
-	cmd := exec.Command("scp", "-r", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "/tmp/"+c.ID.String(), server.User+"@"+server.IP+":"+c.Template.Remote)
+	cmd := exec.Command("scp", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "/tmp/"+c.ID.String(), server.User+"@"+server.IP+":"+c.Template.Remote)
 	cmd.Stdout = &c.StdOut
 	cmd.Stderr = &c.StdErr
 	err = cmd.Run()
@@ -56,16 +56,69 @@ func (c *CMD) CopyTemplate(server *Server) {
 	fmt.Fprintf(&c.StdOut, c.Template.Local+" > "+c.Template.Remote+"\n"+CloseTag+"\n")
 }
 func (c *CMD) CopyFile(server *Server) {
+	defer func() {
+		log.Println("exiting...")
+	}()
 	c.ID = uuid.New()
 	c.Run = " FILE > " + c.File.Local
-	cmd := exec.Command("scp", "-r", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "-r", c.File.Local, server.User+"@"+server.IP+":"+c.File.Remote)
-	cmd.Stdout = &c.StdOut
-	cmd.Stderr = &c.StdErr
-	err := cmd.Run()
-	if err != nil {
-		fmt.Fprintf(&c.StdErr, CloseTag+"\n")
-		return
-	}
+	// dir, errx := os.Getwd()
+	// if errx != nil {
+	// 	log.Fatal(errx)
+	// }
+	// fmt.Println(dir)
+	// var file, err = os.OpenFile(c.File.Local, os.O_RDWR, 0644)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer file.Close()
+	// s, err := file.Stat()
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// if err := c.Session.Run("/bin/scp -t /home/sveinn/xxx"); err != nil {
+	// 	panic("Failed to run: " + err.Error())
+	// }xxx
+	// c.Session.
+	log.Println("starting ..")
+	// if err := c.Session.Run("/bin/scp -tr ./"); err != nil {
+	// 	panic("Failed to run: " + err.Error())
+	// }
+	fmt.Fprint(c.StdIn, "/bin/scp -tr ./")
+	log.Println("made it ...")
+	content := "123456789\n"
+	fmt.Fprintln(c.StdIn, "D0755", 0, "testdir") // mkdir
+	fmt.Fprintln(c.StdIn, "C0644", len(content), "testfile1")
+	fmt.Fprint(c.StdIn, content)
+	fmt.Fprint(c.StdIn, "\x00") // transfer end with \x00
+	fmt.Fprintln(c.StdIn, "C0644", len(content), "testfile2")
+	fmt.Fprint(c.StdIn, content)
+	fmt.Fprint(c.StdIn, "\x00")
+	c.StdIn.Close()
+
+	log.Println("done ...")
+	// xcmd := exec.Command("whoami")
+	// xb, _ := xcmd.Output()
+	// log.Println(string(xb))
+
+	// xcmd = exec.Command("which", "scp")
+	// xb, _ = xcmd.Output()
+	// log.Println(string(xb))
+
+	// xcmd = exec.Command("pwd")
+	// xb, _ = xcmd.Output()
+	// log.Println(string(xb))
+
+	// log.Println("scp", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "-r", c.File.Local, server.User+"@"+server.IP+":"+c.File.Remote)
+	// cmd := exec.Command("scp", "-v", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "-r", c.File.Local, server.User+"@"+server.IP+":"+c.File.Remote)
+	// cmd.Stdout = &c.StdOut
+	// cmd.Stderr = &c.StdErr
+	// err := cmd.Run()
+	// if err != nil {
+	// 	fmt.Fprintf(&c.StdErr, CloseTag+"\n")
+	// 	return
+	// }
+
 	fmt.Fprintf(&c.StdOut, c.File.Local+" > "+c.File.Remote+"\n"+CloseTag+"\n")
 }
 func OpenSessionsAndRunCommands(server *Server) {
@@ -87,9 +140,9 @@ func OpenSessionsAndRunCommands(server *Server) {
 	for i := range server.Pre {
 		server.Pre[i].Hostname = server.Hostname
 		NewSessionForCommand(&server.Pre[i], server.Client)
-		ParseWaitGroup.Add(1)
-		server.Pre[i].Execute()
-		CommandOutputHandler(&server.Pre[i], &ParseWaitGroup)
+		// ParseWaitGroup.Add(1)
+		// server.Pre[i].Execute()
+		// CommandOutputHandler(&server.Pre[i], &ParseWaitGroup)
 	}
 
 	for i, s := range server.Scripts {
@@ -138,9 +191,9 @@ func OpenSessionsAndRunCommands(server *Server) {
 	for i := range server.Post {
 		server.Post[i].Hostname = server.Hostname
 		NewSessionForCommand(&server.Post[i], server.Client)
-		ParseWaitGroup.Add(1)
-		server.Post[i].Execute()
-		CommandOutputHandler(&server.Post[i], &ParseWaitGroup)
+		// ParseWaitGroup.Add(1)
+		// server.Post[i].Execute()
+		// CommandOutputHandler(&server.Post[i], &ParseWaitGroup)
 	}
 }
 func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {

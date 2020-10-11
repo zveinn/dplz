@@ -1,8 +1,0 @@
-{
-    "servers": "servers/cloud",
-    "project": "projects/dplz",
-    "vars": "projects/dplz/variables/dev.json",
-    "variables": {
-        "name": "Random deployment variables !"
-    }
-}
