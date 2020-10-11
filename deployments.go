@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
+	"github.com/karrick/godirwalk"
 	"github.com/opensourcez/logger"
 	"golang.org/x/crypto/ssh"
 )
@@ -55,71 +57,101 @@ func (c *CMD) CopyTemplate(server *Server) {
 
 	fmt.Fprintf(&c.StdOut, c.Template.Local+" > "+c.Template.Remote+"\n"+CloseTag+"\n")
 }
+func (c *CMD) CopyDirectory(server *Server) {
+
+	c.ID = uuid.New()
+	c.Run = " DIRECTORY > " + c.Directory.Local
+	log.Println("WALKING:", c.Directory)
+	// var insideDir bool
+	// var dirName string
+	var preLevel int = 0
+	var level int = 0
+	var pathSplit []string
+	if err := c.Session.Start("/bin/scp -rt " + c.Directory.Remote); err != nil {
+		panic("Failed to run: " + err.Error())
+	}
+	_ = godirwalk.Walk(c.Directory.Local, &godirwalk.Options{
+		Callback: func(osPathname string, info *godirwalk.Dirent) error {
+
+			pathSplit = strings.Split(osPathname, "/")
+			level = len(pathSplit)
+			isDir := info.IsDir()
+			if !isDir {
+				level--
+			}
+			levelJump := preLevel - level
+			log.Println(osPathname, info.IsDir(), info, info.Name(), level, preLevel, levelJump)
+			for i := 0; i < levelJump; i++ {
+				log.Println("Leaving dir:", osPathname)
+				fmt.Fprintln(c.StdIn, "E")
+			}
+			if info.IsDir() {
+				if level != preLevel {
+					if level > preLevel {
+						log.Println("Creating dir:", info.Name())
+						fmt.Fprintln(c.StdIn, "D"+c.Directory.Mode, 0, info.Name())
+					}
+				}
+			} else {
+
+				var file, err = os.OpenFile(osPathname, os.O_RDWR, 0644)
+				if err != nil {
+					panic(err)
+				}
+				s, err := file.Stat()
+				if err != nil {
+					panic(err)
+				}
+
+				log.Println("Creating file:", osPathname)
+				fmt.Fprintln(c.StdIn, "C"+c.Directory.Mode, s.Size(), s.Name())
+				_, _ = io.Copy(c.StdIn, file)
+				fmt.Fprint(c.StdIn, "\x00")
+				// create file..
+				file.Close()
+			}
+			preLevel = level
+			return nil
+		},
+		Unsorted: true,
+	})
+
+}
 func (c *CMD) CopyFile(server *Server) {
-	defer func() {
-		log.Println("exiting...")
-	}()
 	c.ID = uuid.New()
 	c.Run = " FILE > " + c.File.Local
-	// dir, errx := os.Getwd()
-	// if errx != nil {
-	// 	log.Fatal(errx)
-	// }
-	// fmt.Println(dir)
-	// var file, err = os.OpenFile(c.File.Local, os.O_RDWR, 0644)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer file.Close()
-	// s, err := file.Stat()
-	// if err != nil {
-	// 	panic(err)
-	// }
 
-	// if err := c.Session.Run("/bin/scp -t /home/sveinn/xxx"); err != nil {
-	// 	panic("Failed to run: " + err.Error())
-	// }xxx
-	// c.Session.
-	log.Println("starting ..")
-	// if err := c.Session.Run("/bin/scp -tr ./"); err != nil {
-	// 	panic("Failed to run: " + err.Error())
-	// }
-	fmt.Fprint(c.StdIn, "/bin/scp -tr ./")
-	log.Println("made it ...")
-	content := "123456789\n"
-	fmt.Fprintln(c.StdIn, "D0755", 0, "testdir") // mkdir
-	fmt.Fprintln(c.StdIn, "C0644", len(content), "testfile1")
-	fmt.Fprint(c.StdIn, content)
-	fmt.Fprint(c.StdIn, "\x00") // transfer end with \x00
-	fmt.Fprintln(c.StdIn, "C0644", len(content), "testfile2")
-	fmt.Fprint(c.StdIn, content)
+	// localNameSplit := strings.Split(c.File.Local, "/")
+	// localName := localNameSplit[len(localNameSplit)-1]
+	pathSplit := strings.Split(c.File.Remote, "/")
+	pathSplitLenth := len(pathSplit)
+	var fileName string
+	var remotePath string
+	if pathSplitLenth == 1 {
+		fileName = pathSplit[0]
+		remotePath = "./"
+	} else {
+		fileName = pathSplit[len(pathSplit)-1]
+		remotePath = strings.Join(pathSplit[0:len(pathSplit)-1], "/")
+	}
+	// log.Println(remotePath+"/", fileName)
+	var file, err = os.OpenFile(c.File.Local, os.O_RDWR, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	s, err := file.Stat()
+	if err != nil {
+		panic(err)
+	}
+	if err := c.Session.Start("/bin/scp -rt " + remotePath + "/"); err != nil {
+		panic("Failed to run: " + err.Error())
+	}
+	fmt.Fprintln(c.StdIn, "C"+c.File.Mode, s.Size(), fileName)
+	_, _ = io.Copy(c.StdIn, file)
 	fmt.Fprint(c.StdIn, "\x00")
-	c.StdIn.Close()
 
-	log.Println("done ...")
-	// xcmd := exec.Command("whoami")
-	// xb, _ := xcmd.Output()
-	// log.Println(string(xb))
-
-	// xcmd = exec.Command("which", "scp")
-	// xb, _ = xcmd.Output()
-	// log.Println(string(xb))
-
-	// xcmd = exec.Command("pwd")
-	// xb, _ = xcmd.Output()
-	// log.Println(string(xb))
-
-	// log.Println("scp", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "-r", c.File.Local, server.User+"@"+server.IP+":"+c.File.Remote)
-	// cmd := exec.Command("scp", "-v", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "-r", c.File.Local, server.User+"@"+server.IP+":"+c.File.Remote)
-	// cmd.Stdout = &c.StdOut
-	// cmd.Stderr = &c.StdErr
-	// err := cmd.Run()
-	// if err != nil {
-	// 	fmt.Fprintf(&c.StdErr, CloseTag+"\n")
-	// 	return
-	// }
-
-	fmt.Fprintf(&c.StdOut, c.File.Local+" > "+c.File.Remote+"\n"+CloseTag+"\n")
+	// fmt.Fprintf(&c.StdOut, c.File.Local+" > "+c.File.Remote+"\n"+CloseTag+"\n")
 }
 func OpenSessionsAndRunCommands(server *Server) {
 	defer func() {
@@ -134,12 +166,11 @@ func OpenSessionsAndRunCommands(server *Server) {
 		newErr.Log()
 		return
 	}
-
 	server.Client = conn
 
 	for i := range server.Pre {
 		server.Pre[i].Hostname = server.Hostname
-		NewSessionForCommand(&server.Pre[i], server.Client)
+		// NewSessionForCommand(&server.Pre[i], server.Client)
 		// ParseWaitGroup.Add(1)
 		// server.Pre[i].Execute()
 		// CommandOutputHandler(&server.Pre[i], &ParseWaitGroup)
@@ -153,6 +184,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 		}
 
 		for ii, iv := range s.CMD {
+			// log.Println("RUNNING:", ii, iv, CMDFilter)
 			if CMDFilter != "" {
 				if CMDFilter != iv.Filter && CMDFilter != "*" {
 					continue
@@ -174,6 +206,12 @@ func OpenSessionsAndRunCommands(server *Server) {
 				} else {
 					server.Scripts[i].CMD[ii].CopyFile(server)
 				}
+			} else if iv.Directory != nil {
+				if iv.Async {
+					go server.Scripts[i].CMD[ii].CopyDirectory(server)
+				} else {
+					server.Scripts[i].CMD[ii].CopyDirectory(server)
+				}
 			} else {
 				if iv.Async {
 					go server.Scripts[i].CMD[ii].Execute()
@@ -190,7 +228,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 	}
 	for i := range server.Post {
 		server.Post[i].Hostname = server.Hostname
-		NewSessionForCommand(&server.Post[i], server.Client)
+		// NewSessionForCommand(&server.Post[i], server.Client)
 		// ParseWaitGroup.Add(1)
 		// server.Post[i].Execute()
 		// CommandOutputHandler(&server.Post[i], &ParseWaitGroup)
@@ -208,6 +246,7 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 		// color.Magenta("Closing: " + cmd.ID.String())
 	}()
 	var closing bool
+	var fileSuccess int
 	for {
 		time.Sleep(100 * time.Millisecond)
 		// log.Println("LEN:", cmd.ID, len(cmd.StdErr.Buffer), len(cmd.StdOut.Buffer))
@@ -221,8 +260,22 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 				msg = bytes.Replace(msg, []byte(CloseTag+"\n"), []byte(""), -1)
 			}
 			if len(msg) > 0 {
-				color.Green("(" + cmd.Hostname + "): " + cmd.Run)
-				fmt.Println(string(msg))
+				if cmd.File != nil && msg[0] == 0 {
+					fileSuccess++
+					if fileSuccess >= 3 {
+						color.Green("(" + cmd.Hostname + "): " + cmd.Run)
+						fmt.Println(string(msg), msg)
+						closing = true
+					}
+				} else if cmd.File != nil && msg[0] == 1 {
+					color.Red("(" + cmd.Hostname + "): " + cmd.Run)
+					fmt.Println(string(msg))
+					closing = true
+				} else {
+					color.Green("(" + cmd.Hostname + "): " + cmd.Run)
+					fmt.Println(string(msg), msg)
+				}
+
 			}
 			if closing {
 				cmd.Done = true

@@ -52,8 +52,10 @@ func NewSessionForCommand(cmd *CMD, conn *ssh.Client) {
 	}
 
 	cmd.StdIn = newSTDin
-	err = cmd.Session.Shell()
-	if err != nil {
-		log.Println(err, string(debug.Stack()))
+	if cmd.File == nil && cmd.Directory == nil && cmd.Template == nil {
+		err = cmd.Session.Shell()
+		if err != nil {
+			log.Println(err, string(debug.Stack()))
+		}
 	}
 }

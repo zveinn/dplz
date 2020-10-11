@@ -1,0 +1,46 @@
+{
+    "name": "Basic deployment",
+    "filter": "basic",
+    "variables": {
+        "name": "Some random name",
+        "testVariable": "Here is some random text you can inject into a file..."
+    },
+    "cmd": [
+        {
+            "template": {
+                "local": "files/webserver.template.conf",
+                "remote": "/home/sveinn/meow/test.template",
+                "mode": "0777"
+            },
+            "filter": "templates",
+            "async": true
+        },
+        {
+            "file": {
+                "local": "files/meow",
+                "remote": "/home/sveinn/meow/test.file",
+                "mode": "0777"
+            },
+            "filter": "files",
+            "async": true
+        },
+        {
+            "directory": {
+                "local": "files",
+                "remote": "/home/sveinn/meow/",
+                "mode": "0777"
+            },
+            "filter": "dir",
+            "async": false
+        },
+        {
+            "run": "uname -a",
+            "filter": "uname",
+            "async": true
+        },
+        {
+            "run": "ls -la",
+            "filter": "list"
+        }
+    ]
+}

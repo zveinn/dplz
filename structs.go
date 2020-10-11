@@ -11,7 +11,6 @@ import (
 var Servers []*Server
 var Variables = make(map[string]string)
 var Deployment *D
-var DialWaitGroup = sync.WaitGroup{}
 var ParseWaitGroup = sync.WaitGroup{}
 var CloseTag = "lkajbdflkajbdslkfbalkdfdeploy"
 var CMDFilter string
@@ -53,16 +52,17 @@ type Script struct {
 }
 
 type CMD struct {
-	ID       uuid.UUID
-	Done     bool
-	Run      string
-	File     *File
-	Template *Template
-	Out      string
-	Success  bool
-	Hostname string
-	Filter   string
-	Async    bool
+	ID        uuid.UUID
+	Done      bool
+	Run       string
+	File      *File
+	Template  *Template
+	Directory *Direcotry
+	Out       string
+	Success   bool
+	Hostname  string
+	Filter    string
+	Async     bool
 	// Session
 	StdIn   io.WriteCloser
 	StdOut  ChannelWriter
@@ -72,9 +72,16 @@ type CMD struct {
 type File struct {
 	Local  string
 	Remote string
+	Mode   string
 }
 type Template struct {
 	Local  string
 	Remote string
 	Data   []byte
+	Mode   string
+}
+type Direcotry struct {
+	Local  string
+	Remote string
+	Mode   string
 }
