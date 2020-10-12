@@ -124,24 +124,40 @@ This is a basic script, it will contain some variables and some commands to exec
     "cmd": [
         {
             "template": {
-                "local": "projects/dplz/files/webserver.template.conf",
-                "remote": "test.template"
+                "local": "files/webserver.template.conf",
+                "remote": "/home/sveinn/meow/test.template",
+                "mode": "0777"
             },
             "filter": "templates",
             "async": true
         },
         {
             "file": {
-                "local": "projects/dplz/files/webserver.template.conf",
-                "remote": "test.file"
+                "local": "files/meow",
+                "remote": "/home/sveinn/meow/test.file",
+                "mode": "0777"
             },
             "filter": "files",
             "async": true
         },
         {
+            "run": "mkdir /home/sveinn/meow",
+            "filter": "dir",
+            "async": false
+        },
+        {
+            "directory": {
+                "local": "files",
+                "remote": "/home/sveinn/meow",
+                "mode": "0777"
+            },
+            "filter": "dir",
+            "async": false
+        },
+        {
             "run": "uname -a",
             "filter": "uname",
-            "async": true
+            "async": false
         },
         {
             "run": "ls -la",
