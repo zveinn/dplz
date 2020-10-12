@@ -8,8 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,11 +23,7 @@ import (
 func (c *CMD) Execute() {
 	c.ID = uuid.New()
 	id := ReplaceInUUID(c.ID.String())
-	err := c.Session.Shell()
-	if err != nil {
-		log.Println(err, string(debug.Stack()))
-	}
-
+	c.SetBuffersAndOpenShell()
 	// keeping this one just in case ...
 	// log.Println("executing..")
 	// err := c.Session.Run(c.Run)
@@ -43,25 +37,14 @@ func (c *CMD) Execute() {
 func (c *CMD) CopyTemplate(server *Server) {
 	c.ID = uuid.New()
 	c.Run = " TEMPLATE > " + c.Template.Local
+	c.SetBuffers()
 	err := ioutil.WriteFile("/tmp/"+c.ID.String(), c.Template.Data, 0644)
 	if err != nil {
 		fmt.Fprintf(&c.StdErr, err.Error()+" "+CloseTag+"\n")
 		return
 	}
 
-	cmd := exec.Command("scp", "-P", server.Port, "-o", "StrictHostKeyChecking=no", "-i", server.Key, "/tmp/"+c.ID.String(), server.User+"@"+server.IP+":"+c.Template.Remote)
-	cmd.Stdout = &c.StdOut
-	cmd.Stderr = &c.StdErr
-	err = cmd.Run()
-	if err != nil {
-		err = os.Remove("/tmp/" + c.ID.String())
-		if err != nil {
-			fmt.Fprintf(&c.StdErr, err.Error()+" "+CloseTag+"\n")
-			return
-		}
-		fmt.Fprintf(&c.StdErr, CloseTag+"\n")
-		return
-	}
+	c.MoveFile("/tmp/"+c.ID.String(), c.Template.Remote, c.Template.Mode)
 
 	err = os.Remove("/tmp/" + c.ID.String())
 	if err != nil {
@@ -71,9 +54,7 @@ func (c *CMD) CopyTemplate(server *Server) {
 
 	fmt.Fprintf(&c.StdOut, c.Template.Local+" > "+c.Template.Remote+"\n"+CloseTag+"\n")
 }
-func (c *CMD) WriteCopyDirectoryError(msg string) {
-	fmt.Fprintf(&c.StdErr, c.Directory.Local+" > "+c.Directory.Remote+":"+msg+"\n"+CloseTag+"\n")
-}
+
 func (c *CMD) CopyDirectory(server *Server) {
 
 	c.ID = uuid.New()
@@ -83,20 +64,14 @@ func (c *CMD) CopyDirectory(server *Server) {
 		return
 	}
 
-	err := c.Session.Shell()
-	if err != nil {
-		log.Println(err, string(debug.Stack()))
-	}
-
-	out, err := c.Session.CombinedOutput("ls -la " + c.Directory.Remote)
-	if err != nil {
-		log.Println(err, err.Error())
-		fmt.Fprint(c.StdIn, err.Error(), CloseTag)
-		// BREAK HERE...
-	}
-	log.Println(string(out))
+	out, err := c.Session.CombinedOutput("stat " + c.Directory.Remote)
 	c.Session.Close()
-	os.Exit(1)
+	c.NewSessionForCommand(c.Conn)
+	c.SetBuffers()
+	if err != nil {
+		fmt.Fprint(&c.StdErr, string(out), CloseTag)
+		return
+	}
 
 	var preLevel int = 0
 	var level int = 0
@@ -108,7 +83,10 @@ func (c *CMD) CopyDirectory(server *Server) {
 	c.ExpectedSuccessCount++
 	_ = godirwalk.Walk(c.Directory.Local, &godirwalk.Options{
 		Callback: func(osPathname string, info *godirwalk.Dirent) error {
-
+			// skip the root directory.
+			if osPathname == c.Directory.Local {
+				return nil
+			}
 			pathSplit = strings.Split(osPathname, "/")
 			level = len(pathSplit)
 			isDir := info.IsDir()
@@ -169,9 +147,11 @@ func (c *CMD) CopyDirectory(server *Server) {
 func (c *CMD) CopyFile(server *Server) {
 	c.ID = uuid.New()
 	c.Run = " FILE > " + c.File.Local
-	// localNameSplit := strings.Split(c.File.Local, "/")
-	// localName := localNameSplit[len(localNameSplit)-1]
-	pathSplit := strings.Split(c.File.Remote, "/")
+	c.SetBuffers()
+	c.MoveFile(c.File.Local, c.File.Remote, c.File.Mode)
+}
+func (c *CMD) MoveFile(local, remote, mode string) {
+	pathSplit := strings.Split(remote, "/")
 	pathSplitLenth := len(pathSplit)
 	var fileName string
 	var remotePath string
@@ -183,7 +163,7 @@ func (c *CMD) CopyFile(server *Server) {
 		remotePath = strings.Join(pathSplit[0:len(pathSplit)-1], "/")
 	}
 	// log.Println(remotePath+"/", fileName)
-	var file, err = os.OpenFile(c.File.Local, os.O_RDWR, 0644)
+	var file, err = os.OpenFile(local, os.O_RDWR, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -196,7 +176,7 @@ func (c *CMD) CopyFile(server *Server) {
 		panic("Failed to run: " + err.Error())
 	}
 	c.ExpectedSuccessCount++
-	fmt.Fprintln(c.StdIn, "C"+c.File.Mode, s.Size(), fileName)
+	fmt.Fprintln(c.StdIn, "C"+mode, s.Size(), fileName)
 	c.ExpectedSuccessCount++
 	n, err := io.Copy(c.StdIn, file)
 	if err != nil {
@@ -207,8 +187,9 @@ func (c *CMD) CopyFile(server *Server) {
 	}
 	fmt.Fprint(c.StdIn, "\x00")
 	c.ExpectedSuccessCount++
-
-	// fmt.Fprintf(&c.StdOut, c.File.Local+" > "+c.File.Remote+"\n"+CloseTag+"\n")
+}
+func (c *CMD) WriteCopyDirectoryError(msg string) {
+	fmt.Fprintf(&c.StdErr, c.Directory.Local+" > "+c.Directory.Remote+":"+msg+"\n"+CloseTag+"\n")
 }
 func OpenSessionsAndRunCommands(server *Server) {
 	defer func() {
@@ -227,7 +208,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 
 	for i := range server.Pre {
 		server.Pre[i].Hostname = server.Hostname
-		NewSessionForCommand(&server.Pre[i], server.Client)
+		server.Pre[i].NewSessionForCommand(server.Client)
 		ParseWaitGroup.Add(1)
 		server.Pre[i].Execute()
 		CommandOutputHandler(&server.Pre[i], &ParseWaitGroup)
@@ -249,7 +230,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 			}
 
 			server.Scripts[i].CMD[ii].Hostname = server.Hostname
-			NewSessionForCommand(&server.Scripts[i].CMD[ii], server.Client)
+			server.Scripts[i].CMD[ii].NewSessionForCommand(server.Client)
 			ParseWaitGroup.Add(1)
 			if iv.Template != nil {
 				if iv.Async {
@@ -285,7 +266,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 	}
 	for i := range server.Post {
 		server.Post[i].Hostname = server.Hostname
-		NewSessionForCommand(&server.Post[i], server.Client)
+		server.Post[i].NewSessionForCommand(server.Client)
 		ParseWaitGroup.Add(1)
 		server.Post[i].Execute()
 		CommandOutputHandler(&server.Post[i], &ParseWaitGroup)
@@ -368,7 +349,6 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 		}
 	}
 }
-
 func InjectVariables() {
 
 	for i, v := range Servers {
@@ -392,7 +372,6 @@ func InjectVariables() {
 		// 	// log.Println("DATA:", i, string(Servers[i].Templates[ii]))
 		// }
 	}
-
 }
 func ReplaceVariables(in string, server *Server, script *Script) (out string) {
 	out = in

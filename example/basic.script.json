@@ -25,9 +25,14 @@
             "async": true
         },
         {
+            "run": "mkdir /home/sveinn/meow",
+            "filter": "dir",
+            "async": false
+        },
+        {
             "directory": {
                 "local": "files",
-                "remote": "/home/sveinn/meow/",
+                "remote": "/home/sveinn/meow",
                 "mode": "0777"
             },
             "filter": "dir",

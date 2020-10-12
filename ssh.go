@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"runtime/debug"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -32,24 +33,35 @@ func PrivateKey(path string) ssh.AuthMethod {
 	return ssh.PublicKeys(signer)
 }
 
-func NewSessionForCommand(cmd *CMD, conn *ssh.Client) {
-	cmd.StdOut.Buffer = make(chan []byte, 1000000)
-	cmd.StdErr.Buffer = make(chan []byte, 1000000)
+func (c *CMD) SetBuffers() {
+	c.StdOut.Buffer = make(chan []byte, 1000000)
+	c.StdErr.Buffer = make(chan []byte, 1000000)
+
+	c.Session.Stdout = &c.StdOut
+	c.Session.Stderr = &c.StdErr
+	newSTDin, err := c.Session.StdinPipe()
+	if err != nil {
+		c.Session.Close()
+		log.Println("STDOUT:", err)
+		return
+	}
+	c.StdIn = newSTDin
+}
+func (c *CMD) SetBuffersAndOpenShell() {
+	c.SetBuffers()
+	// THE SHELL NEEDS TO BE LAST!
+	err := c.Session.Shell()
+	if err != nil {
+		log.Println(err, string(debug.Stack()))
+	}
+
+}
+func (c *CMD) NewSessionForCommand(conn *ssh.Client) {
 	session, err := conn.NewSession()
 	if err != nil {
 		log.Println("Session error:", err)
 		return
 	}
-	cmd.Session = session
-	session.Stdout = &cmd.StdOut
-	session.Stderr = &cmd.StdErr
-	newSTDin, err := session.StdinPipe()
-	if err != nil {
-		session.Close()
-		log.Println("STDOUT:", err)
-		return
-	}
-
-	cmd.StdIn = newSTDin
-
+	c.Session = session
+	c.Conn = conn
 }
