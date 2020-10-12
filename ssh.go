@@ -3,7 +3,6 @@ package main
 import (
 	"io/ioutil"
 	"log"
-	"runtime/debug"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -52,10 +51,5 @@ func NewSessionForCommand(cmd *CMD, conn *ssh.Client) {
 	}
 
 	cmd.StdIn = newSTDin
-	if cmd.File == nil && cmd.Directory == nil && cmd.Template == nil {
-		err = cmd.Session.Shell()
-		if err != nil {
-			log.Println(err, string(debug.Stack()))
-		}
-	}
+
 }

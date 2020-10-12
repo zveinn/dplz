@@ -36,7 +36,7 @@
         {
             "run": "uname -a",
             "filter": "uname",
-            "async": true
+            "async": false
         },
         {
             "run": "ls -la",

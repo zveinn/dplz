@@ -10,7 +10,7 @@
     },
     "pre": [
         {
-            "run": "echo 'This runs before all scripts'"
+            "run": "ech 'This runs before all scripts'"
         }
     ],
     "post": [

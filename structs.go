@@ -52,17 +52,26 @@ type Script struct {
 }
 
 type CMD struct {
-	ID        uuid.UUID
-	Done      bool
-	Run       string
-	File      *File
-	Template  *Template
-	Directory *Direcotry
-	Out       string
-	Success   bool
-	Hostname  string
-	Filter    string
-	Async     bool
+	ID   uuid.UUID
+	Done bool
+	Run  string
+
+	Out      string
+	Success  bool
+	Hostname string
+	Filter   string
+	Async    bool
+
+	// Experimental
+	Conn *ssh.Client
+
+	// File and Directory specific
+	File                 *File
+	Template             *Template
+	Directory            *Direcotry
+	ExpectedSuccessCount int
+	TotalSuccessCount    int
+
 	// Session
 	StdIn   io.WriteCloser
 	StdOut  ChannelWriter
