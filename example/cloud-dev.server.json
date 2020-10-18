@@ -1,6 +1,6 @@
 {
     "hostname": "googlecloud-dev-01",
-    "ip": "34.105.184.80",
+    "ip": "34.105.111.12",
     "port": "44444",
     "key": "/home/zhuffles/.ssh/gc",
     "user": "sveinn",

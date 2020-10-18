@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
@@ -35,6 +36,10 @@ func main() {
 	}
 	if *filter != "" {
 		splitFilter := strings.Split(*filter, ".")
+		if len(splitFilter) < 2 {
+			log.Println("You need to specify at least two filters seperated by a dot, example:  script.* or script.files etc..")
+			os.Exit(1)
+		}
 		ScriptFilter = splitFilter[0]
 		CMDFilter = splitFilter[1]
 	}

@@ -94,16 +94,16 @@ func (c *CMD) CopyDirectory(server *Server) {
 				level--
 			}
 			levelJump := preLevel - level
-			log.Println(osPathname, info.IsDir(), info, info.Name(), level, preLevel, levelJump)
+			// log.Println(osPathname, info.IsDir(), info, info.Name(), level, preLevel, levelJump)
 			for i := 0; i < levelJump; i++ {
-				log.Println("Leaving dir:", osPathname)
+				// log.Println("Leaving dir:", osPathname)
 				fmt.Fprintln(c.StdIn, "E")
 				c.ExpectedSuccessCount++
 			}
 			if info.IsDir() {
 				if level != preLevel {
 					if level > preLevel {
-						log.Println("Creating dir:", info.Name())
+						// log.Println("Creating dir:", info.Name())
 						fmt.Fprintln(c.StdIn, "D"+c.Directory.Mode, 0, info.Name())
 						c.ExpectedSuccessCount++
 					}
@@ -122,7 +122,7 @@ func (c *CMD) CopyDirectory(server *Server) {
 					return err
 				}
 
-				log.Println("Creating file:", osPathname)
+				// log.Println("Creating file:", osPathname)
 				fmt.Fprintln(c.StdIn, "C"+c.Directory.Mode, s.Size(), s.Name())
 				c.ExpectedSuccessCount++
 				n, err := io.Copy(c.StdIn, file)
@@ -301,10 +301,10 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 				if cmd.File != nil || cmd.Directory != nil && msg[0] == 0 {
 					// 0 means scp success
 					cmd.TotalSuccessCount = cmd.TotalSuccessCount + len(msg)
-					log.Println(cmd.TotalSuccessCount, cmd.ExpectedSuccessCount)
+					// log.Println(cmd.TotalSuccessCount, cmd.ExpectedSuccessCount)
 					if cmd.TotalSuccessCount >= cmd.ExpectedSuccessCount {
 						color.Green("(" + cmd.Hostname + "): " + cmd.Run)
-						fmt.Println(string(msg), msg)
+						fmt.Println(string(msg))
 						closing = true
 					}
 				} else if cmd.File != nil && msg[0] == 1 {
@@ -314,7 +314,7 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 					closing = true
 				} else {
 					color.Green("(" + cmd.Hostname + "): " + cmd.Run)
-					fmt.Println(string(msg), msg)
+					fmt.Println(string(msg))
 				}
 
 			}
