@@ -14,7 +14,7 @@ Dplz is capable of running shell commands and copying any type of file or direct
 # How to install
 ```bash
 # Get the project using go get
-$ go get github.com/zveinn/dplz
+$ go get github.com/opensourcez/dplz
 # use go to install
 $ go install .
 ```
