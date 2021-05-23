@@ -283,6 +283,7 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 		wait.Done()
 		// color.Magenta("Closing: " + cmd.ID.String())
 	}()
+
 	var closing bool
 	for {
 		time.Sleep(100 * time.Millisecond)
