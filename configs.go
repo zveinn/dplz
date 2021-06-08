@@ -22,10 +22,10 @@ func LoadDeployments(path string) {
 }
 func LoadServers(path string) {
 	configs := FindFiles(path, "server", ".json")
-	for _, v := range configs {
+	for i, v := range configs {
 		data, err := ioutil.ReadFile(v)
 		if err != nil {
-			log.Println("Could not find config file:", v)
+			log.Println("Could not find server config file:", i)
 			os.Exit(1)
 		}
 		S := new(Server)
@@ -40,10 +40,10 @@ func LoadServers(path string) {
 func LoadServices(path string) {
 	configs := FindFiles(path, "script", ".json")
 	var Services []Script
-	for _, v := range configs {
+	for i, v := range configs {
 		data, err := ioutil.ReadFile(v)
 		if err != nil {
-			log.Println("Could not find config file:", v)
+			log.Println("Could not find service config file:", v, i)
 			os.Exit(1)
 		}
 		S := new(Script)
@@ -66,7 +66,7 @@ func LoadVariables(path string) {
 	// for _, v := range configs {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Println("Could not find config file:", path)
+		log.Println("Could not find variables config file:", path)
 		os.Exit(1)
 	}
 	err = json.Unmarshal(data, &Variables)
@@ -83,7 +83,7 @@ func LoadTemplates(path string) {
 				if iiv.Template != nil {
 					data, err := ioutil.ReadFile(iiv.Template.Local)
 					if err != nil {
-						log.Println("Could not find config file:", v)
+						log.Println("Could not find config template file:", iiv.Template.Local)
 						os.Exit(1)
 					}
 					Servers[i].Scripts[ii].CMD[iii].Template.Data = make([]byte, len(data))
