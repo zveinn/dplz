@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-
 	deployment := flag.String("deployment", "", "The path to your deployment file")
 	project := flag.String("project", "", "The path to your project files (not needed if using a deployment file)")
 	servers := flag.String("servers", "", "The path to your server files (not needed if using a deployment file)")
@@ -76,7 +75,7 @@ func main() {
 		fmt.Println()
 		color.Green("You are about to run this deployment")
 		fmt.Println()
-		fmt.Println(color.GreenString("Server:"), Deployment.Servers)
+		fmt.Println(color.GreenString("Servers:"), Deployment.Servers)
 		fmt.Println(color.GreenString("Project"), Deployment.Project)
 		fmt.Println(color.GreenString("Variables File:"), Deployment.Vars)
 		fmt.Println()
@@ -90,7 +89,7 @@ func main() {
 		fmt.Println()
 		color.Green("Running deployment")
 		fmt.Println()
-		fmt.Println(color.GreenString("Server:"), Deployment.Servers)
+		fmt.Println(color.GreenString("Servers:"), Deployment.Servers)
 		fmt.Println(color.GreenString("Project"), Deployment.Project)
 		fmt.Println(color.GreenString("Variables File:"), Deployment.Vars)
 		fmt.Println()

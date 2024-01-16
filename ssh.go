@@ -1,8 +1,8 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"runtime/debug"
 	"time"
 
@@ -21,8 +21,9 @@ func NewSSHConfig(user, key string, timeout int, ignoreInsecure bool) (cfg *ssh.
 	cfg.Timeout = time.Duration(time.Duration(timeout) * time.Second)
 	return
 }
+
 func PrivateKey(path string) ssh.AuthMethod {
-	key, err := ioutil.ReadFile(path)
+	key, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
@@ -34,8 +35,8 @@ func PrivateKey(path string) ssh.AuthMethod {
 }
 
 func (c *CMD) SetBuffers() {
-	c.StdOut.Buffer = make(chan []byte, 1000000)
-	c.StdErr.Buffer = make(chan []byte, 1000000)
+	c.StdOut.Buffer = make(chan []byte, 2000000)
+	c.StdErr.Buffer = make(chan []byte, 2000000)
 
 	c.Session.Stdout = &c.StdOut
 	c.Session.Stderr = &c.StdErr
@@ -47,6 +48,7 @@ func (c *CMD) SetBuffers() {
 	}
 	c.StdIn = newSTDin
 }
+
 func (c *CMD) SetBuffersAndOpenShell() {
 	c.SetBuffers()
 	// THE SHELL NEEDS TO BE LAST!
@@ -54,8 +56,8 @@ func (c *CMD) SetBuffersAndOpenShell() {
 	if err != nil {
 		log.Println(err, string(debug.Stack()))
 	}
-
 }
+
 func (c *CMD) NewSessionForCommand(conn *ssh.Client) {
 	session, err := conn.NewSession()
 	if err != nil {

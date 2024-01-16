@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -33,12 +32,14 @@ func (c *CMD) Execute() {
 	// }
 
 	fmt.Fprint(c.StdIn, c.Run+" 2> /tmp/"+id+".err 1> /tmp/"+id+".out;if [ -s /tmp/"+id+".err ];then cat /tmp/"+id+".err <(echo "+CloseTag+") >&2;else cat /tmp/"+id+".out <(echo "+CloseTag+");fi;rm /tmp/"+id+".*;\n")
+	// fmt.Fprint(c.StdIn, c.Run+" &> /tmp/"+id+".out; cat /tmp/"+id+".out <(echo "+CloseTag+");rm /tmp/"+id+".out;\n")
 }
+
 func (c *CMD) CopyTemplate(server *Server) {
 	c.ID = uuid.New()
 	c.Run = " TEMPLATE > " + c.Template.Local
 	c.SetBuffers()
-	err := ioutil.WriteFile("/tmp/"+c.ID.String(), c.Template.Data, 0644)
+	err := os.WriteFile("/tmp/"+c.ID.String(), c.Template.Data, 0o644)
 	if err != nil {
 		fmt.Fprintf(&c.StdErr, err.Error()+" "+CloseTag+"\n")
 		return
@@ -56,7 +57,6 @@ func (c *CMD) CopyTemplate(server *Server) {
 }
 
 func (c *CMD) CopyDirectory(server *Server) {
-
 	c.ID = uuid.New()
 	c.Run = " DIRECTORY > " + c.Directory.Local
 	if _, err := os.Stat(c.Directory.Local); os.IsNotExist(err) {
@@ -110,7 +110,7 @@ func (c *CMD) CopyDirectory(server *Server) {
 				}
 			} else {
 
-				var file, err = os.OpenFile(osPathname, os.O_RDWR, 0644)
+				file, err := os.OpenFile(osPathname, os.O_RDWR, 0o644)
 				if err != nil {
 					c.WriteCopyDirectoryError(err.Error())
 					return err
@@ -142,14 +142,15 @@ func (c *CMD) CopyDirectory(server *Server) {
 		},
 		Unsorted: true,
 	})
-
 }
+
 func (c *CMD) CopyFile(server *Server) {
 	c.ID = uuid.New()
 	c.Run = " FILE > " + c.File.Local
 	c.SetBuffers()
 	c.MoveFile(c.File.Local, c.File.Remote, c.File.Mode)
 }
+
 func (c *CMD) MoveFile(local, remote, mode string) {
 	pathSplit := strings.Split(remote, "/")
 	pathSplitLenth := len(pathSplit)
@@ -163,7 +164,7 @@ func (c *CMD) MoveFile(local, remote, mode string) {
 		remotePath = strings.Join(pathSplit[0:len(pathSplit)-1], "/")
 	}
 	// log.Println(remotePath+"/", fileName)
-	var file, err = os.OpenFile(local, os.O_RDWR, 0644)
+	file, err := os.OpenFile(local, os.O_RDWR, 0o644)
 	if err != nil {
 		panic(err)
 	}
@@ -180,17 +181,22 @@ func (c *CMD) MoveFile(local, remote, mode string) {
 	c.ExpectedSuccessCount++
 	n, err := io.Copy(c.StdIn, file)
 	if err != nil {
-		panic(err)
+		n, err := io.Copy(c.StdIn, file)
+		if err != nil {
+			panic(fmt.Sprintf("Did not copy full file, copied %d bytes but file is %d bytes. Error: %s", n, s.Size(), err.Error()))
+		}
 	}
 	if n != s.Size() {
-		panic("did not transfer full file")
+		panic(fmt.Sprintf("Did not copy full file, copied %d bytes but file is %d bytes", n, s.Size()))
 	}
 	fmt.Fprint(c.StdIn, "\x00")
 	c.ExpectedSuccessCount++
 }
+
 func (c *CMD) WriteCopyDirectoryError(msg string) {
 	fmt.Fprintf(&c.StdErr, c.Directory.Local+" > "+c.Directory.Remote+":"+msg+"\n"+CloseTag+"\n")
 }
+
 func OpenSessionsAndRunCommands(server *Server) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -217,6 +223,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 	for i, s := range server.Scripts {
 		if ScriptFilter != "" {
 			if s.Filter != ScriptFilter && ScriptFilter != "*" {
+				// fmt.Println("SKIPPING: ", s.Filter, " .. ", ScriptFilter)
 				continue
 			}
 		}
@@ -272,6 +279,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 		CommandOutputHandler(&server.Post[i], &ParseWaitGroup)
 	}
 }
+
 func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -317,7 +325,6 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 					color.Green("(" + cmd.Hostname + "): " + cmd.Run)
 					fmt.Println(string(msg))
 				}
-
 			}
 			if closing {
 				cmd.Done = true
@@ -350,8 +357,8 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 		}
 	}
 }
-func InjectVariables() {
 
+func InjectVariables() {
 	for i, v := range Servers {
 		for ii, iv := range v.Pre {
 			Servers[i].Pre[ii].Run = ReplaceVariables(iv.Run, v, nil)
@@ -374,6 +381,7 @@ func InjectVariables() {
 		// }
 	}
 }
+
 func ReplaceVariables(in string, server *Server, script *Script) (out string) {
 	out = in
 	for i, v := range Variables {
@@ -405,6 +413,7 @@ func ReplaceVariables(in string, server *Server, script *Script) (out string) {
 	}
 	return
 }
+
 func (c *ChannelWriter) Write(buf []byte) (n int, err error) {
 	// log.Println("WRITING:", len(buf), string(buf))
 	b := make([]byte, len(buf))
