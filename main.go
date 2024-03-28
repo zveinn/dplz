@@ -56,12 +56,11 @@ func main() {
 	if *project != "" {
 		Deployment.Project = *project
 	}
-	if Deployment.Servers == "" || Deployment.Project == "" || Deployment.Vars == "" {
+	if Deployment.Servers == "" || Deployment.Project == "" {
 		color.Red("One or flags are missing, please verify your command line arguments..")
 		fmt.Println()
 		fmt.Println("-servers=" + Deployment.Servers)
 		fmt.Println("-project=" + Deployment.Project)
-		fmt.Println("-vars=" + Deployment.Vars)
 		fmt.Println()
 		os.Exit(1)
 	}
