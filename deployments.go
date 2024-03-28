@@ -286,8 +286,8 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 			logger.GenericError(logger.TypeCastRecoverInterface(r)).Log()
 		}
 		cmd.Session.Close()
-		close(cmd.StdOut.Buffer)
-		close(cmd.StdErr.Buffer)
+		// close(cmd.StdOut.Buffer)
+		// close(cmd.StdErr.Buffer)
 		wait.Done()
 		// color.Magenta("Closing: " + cmd.ID.String())
 	}()
@@ -367,8 +367,15 @@ func InjectVariables() {
 			for iii, iiv := range iv.CMD {
 				if iiv.Template != nil {
 					Servers[i].Scripts[ii].CMD[iii].Template.Data = []byte(ReplaceVariables(string(iiv.Template.Data), v, &iv))
-				} else {
+					Servers[i].Scripts[ii].CMD[iii].Template.Local = ReplaceVariables(iiv.Template.Local, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].Template.Remote = ReplaceVariables(iiv.Template.Remote, v, &iv)
+				}
+				if iiv.Run != "" {
 					Servers[i].Scripts[ii].CMD[iii].Run = ReplaceVariables(iiv.Run, v, &iv)
+				}
+				if iiv.File != nil {
+					Servers[i].Scripts[ii].CMD[iii].File.Local = ReplaceVariables(iiv.File.Local, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].File.Remote = ReplaceVariables(iiv.File.Remote, v, &iv)
 				}
 			}
 		}
