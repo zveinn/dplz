@@ -81,6 +81,9 @@ func LoadServices(path string) {
 }
 
 func LoadVariables(path string) {
+	if path == "" {
+		return
+	}
 	// configs := FindFiles(path, tag+".variables", ".json")
 	// for _, v := range configs {
 	data, err := os.ReadFile(path)
