@@ -35,8 +35,8 @@ func PrivateKey(path string) ssh.AuthMethod {
 }
 
 func (c *CMD) SetBuffers() {
-	c.StdOut.Buffer = make(chan []byte, 2000000)
-	c.StdErr.Buffer = make(chan []byte, 2000000)
+	c.StdOut.Buffer = make(chan []byte, 10000000)
+	c.StdErr.Buffer = make(chan []byte, 10000000)
 
 	c.Session.Stdout = &c.StdOut
 	c.Session.Stderr = &c.StdErr
