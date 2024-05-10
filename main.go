@@ -62,14 +62,14 @@ var ignorePrompt bool
 func init() {
 	flag.StringVar(&projectFlag.content, projectFlag.flag, "", projectFlag.usage)
 	flag.StringVar(&projectFlag.content, projectFlag.shorthand, "", projectFlag.usage+" (shorthand)")
-	flag.StringVar(&deploymentFlag.content, projectFlag.flag, "", deploymentFlag.usage)
-	flag.StringVar(&deploymentFlag.content, projectFlag.shorthand, "", deploymentFlag.usage+" (shorthand)")
+	flag.StringVar(&deploymentFlag.content, deploymentFlag.flag, "", deploymentFlag.usage)
+	flag.StringVar(&deploymentFlag.content, deploymentFlag.shorthand, "", deploymentFlag.usage+" (shorthand)")
 	flag.StringVar(&serversFlag.content, serversFlag.flag, "", serversFlag.usage)
 	flag.StringVar(&serversFlag.content, serversFlag.shorthand, "", serversFlag.usage+" (shorthand)")
 	flag.StringVar(&varsFlag.content, varsFlag.flag, "", varsFlag.usage)
 	flag.StringVar(&varsFlag.content, varsFlag.shorthand, "", varsFlag.usage+" (shorthand)")
 	flag.StringVar(&filterFlag.content, filterFlag.flag, "", filterFlag.usage)
-	flag.StringVar(&filterFlag.content, filterFlag.flag, "", filterFlag.usage+" (shorthand)")
+	flag.StringVar(&filterFlag.content, filterFlag.shorthand, "", filterFlag.usage+" (shorthand)")
 
 	flag.BoolVar(&ignorePrompt, "ignorePrompt", false, "Add this flag to skipt the confirmation prompt")
 }
