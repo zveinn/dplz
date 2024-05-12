@@ -15,61 +15,61 @@ import (
 // Defines a group of user-defined information through a flag.
 type flagConfig struct {
 	// Defines the Flag: example -project
-	flag string
+	Flag string
 
-	// Defines Flag shorthand: example -p
-	shorthand string
+	// Defines Flag Shorthand: example -p
+	Shorthand string
 
 	// A small text explaining the effect of given flag on the application
-	usage string
+	Usage string
 
 	// User input from given flag, should be set by flag.StringVars
-	content string
+	Value string
 }
 
 var projectFlag = flagConfig{
-	flag:      "project",
-	shorthand: "p",
-	usage:     "The path to your project files (not needed if using a deployment file)",
+	Flag:      "project",
+	Shorthand: "p",
+	Usage:     "The path to your project files (not needed if using a deployment file)",
 }
 
 var deploymentFlag = flagConfig{
-	flag:      "deployment",
-	shorthand: "d",
-	usage:     "The path to your deployment file",
+	Flag:      "deployment",
+	Shorthand: "d",
+	Usage:     "The path to your deployment file",
 }
 
 var serversFlag = flagConfig{
-	flag:      "servers",
-	shorthand: "s",
-	usage:     "The path to your server files (not needed if using a deployment file)",
+	Flag:      "servers",
+	Shorthand: "s",
+	Usage:     "The path to your server files (not needed if using a deployment file)",
 }
 
 var varsFlag = flagConfig{
-	flag:      "variables",
-	shorthand: "v",
-	usage:     "The path to your variables file (not needed if using a deployment file)",
+	Flag:      "variables",
+	Shorthand: "v",
+	Usage:     "The path to your variables file (not needed if using a deployment file)",
 }
 
 var filterFlag = flagConfig{
-	flag:      "filter",
-	shorthand: "f",
-	usage:     "Only scripts or commands with this tag will be executed. Example: SCRIPT.CMD ",
+	Flag:      "filter",
+	Shorthand: "f",
+	Usage:     "Only scripts or commands with this tag will be executed. Example: SCRIPT.CMD ",
 }
 
 var ignorePrompt bool
 
 func init() {
-	flag.StringVar(&projectFlag.content, projectFlag.flag, "", projectFlag.usage)
-	flag.StringVar(&projectFlag.content, projectFlag.shorthand, "", projectFlag.usage+" (shorthand)")
-	flag.StringVar(&deploymentFlag.content, deploymentFlag.flag, "", deploymentFlag.usage)
-	flag.StringVar(&deploymentFlag.content, deploymentFlag.shorthand, "", deploymentFlag.usage+" (shorthand)")
-	flag.StringVar(&serversFlag.content, serversFlag.flag, "", serversFlag.usage)
-	flag.StringVar(&serversFlag.content, serversFlag.shorthand, "", serversFlag.usage+" (shorthand)")
-	flag.StringVar(&varsFlag.content, varsFlag.flag, "", varsFlag.usage)
-	flag.StringVar(&varsFlag.content, varsFlag.shorthand, "", varsFlag.usage+" (shorthand)")
-	flag.StringVar(&filterFlag.content, filterFlag.flag, "", filterFlag.usage)
-	flag.StringVar(&filterFlag.content, filterFlag.shorthand, "", filterFlag.usage+" (shorthand)")
+	flag.StringVar(&projectFlag.Value, projectFlag.Flag, "", projectFlag.Usage)
+	flag.StringVar(&projectFlag.Value, projectFlag.Shorthand, "", projectFlag.Usage+" (shorthand)")
+	flag.StringVar(&deploymentFlag.Value, deploymentFlag.Flag, "", deploymentFlag.Usage)
+	flag.StringVar(&deploymentFlag.Value, deploymentFlag.Shorthand, "", deploymentFlag.Usage+" (shorthand)")
+	flag.StringVar(&serversFlag.Value, serversFlag.Flag, "", serversFlag.Usage)
+	flag.StringVar(&serversFlag.Value, serversFlag.Shorthand, "", serversFlag.Usage+" (shorthand)")
+	flag.StringVar(&varsFlag.Value, varsFlag.Flag, "", varsFlag.Usage)
+	flag.StringVar(&varsFlag.Value, varsFlag.Shorthand, "", varsFlag.Usage+" (shorthand)")
+	flag.StringVar(&filterFlag.Value, filterFlag.Flag, "", filterFlag.Usage)
+	flag.StringVar(&filterFlag.Value, filterFlag.Shorthand, "", filterFlag.Usage+" (shorthand)")
 
 	flag.BoolVar(&ignorePrompt, "ignorePrompt", false, "Add this flag to skipt the confirmation prompt")
 }
@@ -89,8 +89,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if filterFlag.content != "" {
-		splitFilter := strings.Split(filterFlag.content, ".")
+	if filterFlag.Value != "" {
+		splitFilter := strings.Split(filterFlag.Value, ".")
 		if len(splitFilter) < 2 {
 			log.Println("You need to specify at least two filters seperated by a dot, example:  script.* or script.files etc..")
 			os.Exit(1)
@@ -99,18 +99,18 @@ func main() {
 		CMDFilter = splitFilter[1]
 	}
 	Deployment = new(D)
-	if deploymentFlag.content != "" {
-		LoadDeployments(deploymentFlag.content)
+	if deploymentFlag.Value != "" {
+		LoadDeployments(deploymentFlag.Value)
 	}
 
-	if serversFlag.content != "" {
-		Deployment.Servers = serversFlag.content
+	if serversFlag.Value != "" {
+		Deployment.Servers = serversFlag.Value
 	}
-	if varsFlag.content != "" {
-		Deployment.Vars = varsFlag.content
+	if varsFlag.Value != "" {
+		Deployment.Vars = varsFlag.Value
 	}
-	if projectFlag.content != "" {
-		Deployment.Project = projectFlag.content
+	if projectFlag.Value != "" {
+		Deployment.Project = projectFlag.Value
 	}
 	if Deployment.Servers == "" || Deployment.Project == "" {
 		color.Red("One or flags are missing, please verify your command line arguments..")
