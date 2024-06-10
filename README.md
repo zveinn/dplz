@@ -1,6 +1,6 @@
 # Dplz
 Dplz is a deployment system that only requires BASH and SSH. No installation is required on the remote machine in order for it to work. <br> <br>
-Dplz is capable of running shell commands and copying any type of file or directory contents. Dplz will also output a report that will tell the user if commands worked or failed. 
+Dplz is capable of running shell commands and copying any type of file or directory contents. Dplz will also output a report that will tell the user if commands worked or failed.
  <br> <br>
  Right now this software is in beta, but I would love for anyone and everyone to try it out and flood me with issues to work on.
 
@@ -30,12 +30,12 @@ $ go install .
     - Script files need to be located within your project directory
 5. [Run a deployment](#Defining-a-server)
 
-# Running deployments 
+# Running deployments
 ```bash
 # Just run a basic deployment
-$ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE] 
+$ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE]
 # Run a deployment and ignore warning prompt
-$ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE] -ignorePrompt 
+$ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE] -ignorePrompt
 # Run a deployment, ignore the warning prompt and use a filter.
 $ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE] -ignorePrompt -filter "script.cmd"
 
@@ -45,45 +45,45 @@ $ dplz -servers=[PATH_TO_SEVER_FOLDER] -project=[PATH_TO_PROJECT_FOLDER] -vars=[
 
 
 # Command Line Arguments
-Command line arguments can be combines with deployment json files. If you do combine them, the command line arguments will overwrite the deployment file settings.
+Command line arguments can be combined with deployment json files. If you do combine them, the command line arguments will overwrite the deployment file settings.
 ```go
 	flag.String("deployment", "", "The path to your deployment file")
 	flag.String("project", "", "The path to your project files (not needed if using a deployment file)")
 	flag.String("servers", "", "The path to your server files (not needed if using a deployment file)")
 	flag.String("vars", "", "The path to your variables file (not needed if using a deployment file)")
-	flag.Bool("ignorePrompt", false, "Add this flag to skipt the confirmation prompt")
+	flag.Bool("ignorePrompt", false, "Add this flag to skip the confirmation prompt")
 	flag.String("filter", "", "Only scripts or commands with this tag will be executed. Example: SCRIPT.CMD ")
 ```
 
 # Defining servers
-Before you defined any deployments you need to define a target server. <br>
+Before you define any deployments you need to define a target server. <br>
 Each server object contains some basic connections information, custom variables and PRE/POST scripts. <br>
-- Variables are accessable in commands and tamplates. 
+- Variables are accessable in commands and tamplates.
 - Pre scripts will run BEFORE any other scripts run on that server
 - Post scripts will run AFTER all scripts have been executed.
 ```json
 {
     "hostname": "googlecloud-dev-01",
-    "ip": "131.161.181.11", 
-    "port": "22", 
-    "key": "/home/user/.ssh/ssh-key", 
-    "user": "root", 
-    "variables": { 
+    "ip": "131.161.181.11",
+    "port": "22",
+    "key": "/home/user/.ssh/ssh-key",
+    "user": "root",
+    "variables": {
         "privateIP": "11.11.11.11",
         "dns": "1.1.1.1"
     },
-    "pre": [ 
-        {"run": "echo 'This runs before all scripts'"}
+    "pre": [
+        {"run": "echo 'This runs before all the scripts'"}
     ],
-    "post": [ 
-        {"run": "echo 'This runs after all script'"}
+    "post": [
+        {"run": "echo 'This runs after all the scripts'"}
     ]
 }
 ```
 
 # Defining deployments
-This part is purely optional, you can input all of the below parameters are command line arguments. But for the sake of replicating deployments we decided to add this "highest level object". <br>
-A Deployment will define the location of your server json files, project json files and the variables json file. 
+This part is purely optional. You can input all of the below parameters as command line arguments as well. But for the sake of replicating deployments we decided to add this "highest level object". <br>
+A Deployment will define the location of your server json files, project json files and the variables json file.
 - NOTE: Deployment wide variables are only configurable inside a deployment json file
 ```json
 {
@@ -97,8 +97,8 @@ A Deployment will define the location of your server json files, project json fi
 ```
 
 # Defining variables
-Variables are defined in a json.file and the -vars flag is used to load variables each time you run a deployment.
-- These variables are available inside commands and templates. 
+Variables are defined in a json file and the `vars` flag is used to load variables each time you run a deployment.
+- These variables are available inside commands and templates.
 ```json
 {
     "testVariable": "Dev variables loaded",
@@ -108,10 +108,10 @@ Variables are defined in a json.file and the -vars flag is used to load variable
 ```
 
 # Defining scripts
-This is a basic script, it will contain some variables and some commands to execute. There are three types of commands:
+This is a basic script, it will contain some variables and commands to execute. There are three types of commands:
 1. Run - Only runs a commands on the server
-2. File - Copies a file AS IS to the server ( follows SCP syntax )
-3. Template - Copies a file AND replaces variables ( follows SCP syntax )
+2. File - Copies a file AS IS to the server (follows SCP syntax)
+3. Template - Copies a file AND replaces variables (follows SCP syntax)
 
 ```json
 {
@@ -168,20 +168,20 @@ This is a basic script, it will contain some variables and some commands to exec
 ```
 
 # Ordering of scripts
-Scripts do not have any guarentee to be ran in a particular order. The ordering is soly based on the directory walking machanism, which makes it non-dependable.
+Scripts do not have any guarentee to be run in a particular order. The ordering is solely based on the directory walking machanism, which makes it non-dependable.
 
 # Ordering of commands
 Commands present inside scripts will always be executed in order. Except if the async tag is specified, then ordering is not guaranteed for the commands flagged as async.
 
-# filtering
+# Filtering
 The filtering is currently a strict matching filter. The filter tag and the filter variables on the script or command need to match exactly.
 
  Run a certain script and commands that match the filter
- -  -filter scripts.cmd
+ -  `-filter scripts.cmd`
 
  Run a certain set of commands inside all filters
- - -filter *.cmd
+ - `-filter *.cmd`
 
 Run all commands inside a scripts matching the filter
- - -filter scripts.*
+ - `-filter scripts.*`
 
