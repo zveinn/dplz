@@ -8,8 +8,8 @@
     "cmd": [
         {
             "template": {
-                "local": "files/webserver.template.conf",
-                "remote": "/home/sveinn/meow/test.template",
+                "src": "files/webserver.template.conf",
+                "dst": "/home/sveinn/meow/test.template",
                 "mode": "0777"
             },
             "filter": "templates",
@@ -17,8 +17,8 @@
         },
         {
             "file": {
-                "local": "files/meow",
-                "remote": "/home/sveinn/meow/test.file",
+                "src": "files/meow",
+                "dst": "/home/sveinn/meow/test.file",
                 "mode": "0777"
             },
             "filter": "files",
@@ -31,8 +31,8 @@
         },
         {
             "directory": {
-                "local": "files",
-                "remote": "/home/sveinn/meow",
+                "src": "files",
+                "dst": "/home/sveinn/meow",
                 "mode": "0777"
             },
             "filter": "dir",

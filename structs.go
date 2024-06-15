@@ -80,18 +80,18 @@ type CMD struct {
 	Session *ssh.Session
 }
 type File struct {
-	Local  string
-	Remote string
+	Src  string
+	Dst string
 	Mode   string
 }
 type Template struct {
-	Local  string
-	Remote string
+	Src  string
+	Dst string
 	Data   []byte
 	Mode   string
 }
 type Direcotry struct {
-	Local  string
-	Remote string
+	Src  string
+	Dst string
 	Mode   string
 }
