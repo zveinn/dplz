@@ -17,7 +17,9 @@ func NewSSHConfig(user, key string,	password string, timeout int, ignoreInsecure
 		cfg.Auth = []ssh.AuthMethod{
 			ssh.Password(password), 
 		}
-	}else {
+	}
+	
+	if password == "" {
 		cfg.Auth = []ssh.AuthMethod{
 			PrivateKey(key),
 		}
