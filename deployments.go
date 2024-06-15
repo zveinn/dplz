@@ -204,7 +204,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 		}
 	}()
 
-	conn, err := ssh.Dial("tcp", server.IP+":"+server.Port, NewSSHConfig(server.User, server.Key, 10, true))
+	conn, err := ssh.Dial("tcp", server.IP+":"+server.Port, NewSSHConfig(server.User, server.Key, server.Password, 10, true))
 	if err != nil {
 		newErr := logger.GenericErrorWithMessage(err, "@ "+server.IP+">"+server.Hostname)
 		newErr.Log()

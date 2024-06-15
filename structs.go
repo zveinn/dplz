@@ -26,6 +26,7 @@ type D struct {
 // Server ..
 type Server struct {
 	Key       string
+	Password  string
 	User      string
 	Hostname  string
 	IP        string
