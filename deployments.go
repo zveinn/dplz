@@ -251,6 +251,7 @@ func OpenSessionsAndRunCommands(server *Server) {
 
 			if server.Scripts[i].CMD[ii].Local  { 
 				server.Scripts[i].CMD[ii].ExecuteLocal()
+				continue
 			}
 
 			server.Scripts[i].CMD[ii].Hostname = server.Hostname
