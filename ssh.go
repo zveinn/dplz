@@ -13,13 +13,13 @@ func NewSSHConfig(user, key string,	password string, timeout int, ignoreInsecure
 	cfg = new(ssh.ClientConfig)
 	cfg.User = user
 
-	if key == "" { 
+	if password != "" { 
 		cfg.Auth = []ssh.AuthMethod{
 			ssh.Password(password), 
 		}
 	}
-	
-	if password == "" {
+
+	if key != "" {
 		cfg.Auth = []ssh.AuthMethod{
 			PrivateKey(key),
 		}
