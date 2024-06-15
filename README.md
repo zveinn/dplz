@@ -124,8 +124,8 @@ This is a basic script, it will contain some variables and commands to execute. 
     "cmd": [
         {
             "template": {
-                "local": "files/webserver.template.conf",
-                "remote": "/home/sveinn/meow/test.template",
+                "src": "files/webserver.template.conf",
+                "dst": "/home/sveinn/meow/test.template",
                 "mode": "0777"
             },
             "filter": "templates",
@@ -133,8 +133,8 @@ This is a basic script, it will contain some variables and commands to execute. 
         },
         {
             "file": {
-                "local": "files/meow",
-                "remote": "/home/sveinn/meow/test.file",
+                "src": "files/meow",
+                "dst": "/home/sveinn/meow/test.file",
                 "mode": "0777"
             },
             "filter": "files",
@@ -147,8 +147,8 @@ This is a basic script, it will contain some variables and commands to execute. 
         },
         {
             "directory": {
-                "local": "files",
-                "remote": "/home/sveinn/meow",
+                "src": "files",
+                "dst": "/home/sveinn/meow",
                 "mode": "0777"
             },
             "filter": "dir",

@@ -37,7 +37,7 @@ func (c *CMD) Execute() {
 
 func (c *CMD) CopyTemplate(server *Server) {
 	c.ID = uuid.New()
-	c.Run = " TEMPLATE > " + c.Template.Local
+	c.Run = " TEMPLATE > " + c.Template.Src
 	c.SetBuffers()
 	err := os.WriteFile("/tmp/"+c.ID.String(), c.Template.Data, 0o644)
 	if err != nil {
@@ -45,7 +45,7 @@ func (c *CMD) CopyTemplate(server *Server) {
 		return
 	}
 
-	c.MoveFile("/tmp/"+c.ID.String(), c.Template.Remote, c.Template.Mode)
+	c.MoveFile("/tmp/"+c.ID.String(), c.Template.Dst, c.Template.Mode)
 
 	err = os.Remove("/tmp/" + c.ID.String())
 	if err != nil {
@@ -53,18 +53,18 @@ func (c *CMD) CopyTemplate(server *Server) {
 		return
 	}
 
-	fmt.Fprintf(&c.StdOut, c.Template.Local+" > "+c.Template.Remote+"\n"+CloseTag+"\n")
+	fmt.Fprintf(&c.StdOut, c.Template.Src+" > "+c.Template.Dst+"\n"+CloseTag+"\n")
 }
 
 func (c *CMD) CopyDirectory(server *Server) {
 	c.ID = uuid.New()
-	c.Run = " DIRECTORY > " + c.Directory.Local
-	if _, err := os.Stat(c.Directory.Local); os.IsNotExist(err) {
+	c.Run = " DIRECTORY > " + c.Directory.Src
+	if _, err := os.Stat(c.Directory.Src); os.IsNotExist(err) {
 		c.WriteCopyDirectoryError(err.Error())
 		return
 	}
 
-	out, err := c.Session.CombinedOutput("stat " + c.Directory.Remote)
+	out, err := c.Session.CombinedOutput("stat " + c.Directory.Dst)
 	c.Session.Close()
 	c.NewSessionForCommand(c.Conn)
 	c.SetBuffers()
@@ -76,15 +76,15 @@ func (c *CMD) CopyDirectory(server *Server) {
 	var preLevel int = 0
 	var level int = 0
 	var pathSplit []string
-	if err := c.Session.Start("/bin/scp -rt " + c.Directory.Remote); err != nil {
+	if err := c.Session.Start("/bin/scp -rt " + c.Directory.Dst); err != nil {
 		c.WriteCopyDirectoryError(err.Error())
 		return
 	}
 	c.ExpectedSuccessCount++
-	_ = godirwalk.Walk(c.Directory.Local, &godirwalk.Options{
+	_ = godirwalk.Walk(c.Directory.Src, &godirwalk.Options{
 		Callback: func(osPathname string, info *godirwalk.Dirent) error {
 			// skip the root directory.
-			if osPathname == c.Directory.Local {
+			if osPathname == c.Directory.Src {
 				return nil
 			}
 			pathSplit = strings.Split(osPathname, "/")
@@ -146,25 +146,25 @@ func (c *CMD) CopyDirectory(server *Server) {
 
 func (c *CMD) CopyFile(server *Server) {
 	c.ID = uuid.New()
-	c.Run = " FILE > " + c.File.Local
+	c.Run = " FILE > " + c.File.Src
 	c.SetBuffers()
-	c.MoveFile(c.File.Local, c.File.Remote, c.File.Mode)
+	c.MoveFile(c.File.Src, c.File.Dst, c.File.Mode)
 }
 
-func (c *CMD) MoveFile(local, remote, mode string) {
-	pathSplit := strings.Split(remote, "/")
+func (c *CMD) MoveFile(src, dst, mode string) {
+	pathSplit := strings.Split(dst, "/")
 	pathSplitLenth := len(pathSplit)
 	var fileName string
-	var remotePath string
+	var dstPath string
 	if pathSplitLenth == 1 {
 		fileName = pathSplit[0]
-		remotePath = "./"
+		dstPath = "./"
 	} else {
 		fileName = pathSplit[len(pathSplit)-1]
-		remotePath = strings.Join(pathSplit[0:len(pathSplit)-1], "/")
+		dstPath = strings.Join(pathSplit[0:len(pathSplit)-1], "/")
 	}
-	// log.Println(remotePath+"/", fileName)
-	file, err := os.OpenFile(local, os.O_RDWR, 0o644)
+	// log.Println(dstPath+"/", fileName)
+	file, err := os.OpenFile(src, os.O_RDWR, 0o644)
 	if err != nil {
 		panic(err)
 	}
@@ -173,7 +173,7 @@ func (c *CMD) MoveFile(local, remote, mode string) {
 	if err != nil {
 		panic(err)
 	}
-	if err := c.Session.Start("/bin/scp -rt " + remotePath + "/"); err != nil {
+	if err := c.Session.Start("/bin/scp -rt " + dstPath + "/"); err != nil {
 		panic("Failed to run: " + err.Error())
 	}
 	c.ExpectedSuccessCount++
@@ -194,7 +194,7 @@ func (c *CMD) MoveFile(local, remote, mode string) {
 }
 
 func (c *CMD) WriteCopyDirectoryError(msg string) {
-	fmt.Fprintf(&c.StdErr, c.Directory.Local+" > "+c.Directory.Remote+":"+msg+"\n"+CloseTag+"\n")
+	fmt.Fprintf(&c.StdErr, c.Directory.Src+" > "+c.Directory.Dst+":"+msg+"\n"+CloseTag+"\n")
 }
 
 func OpenSessionsAndRunCommands(server *Server) {
@@ -367,15 +367,15 @@ func InjectVariables() {
 			for iii, iiv := range iv.CMD {
 				if iiv.Template != nil {
 					Servers[i].Scripts[ii].CMD[iii].Template.Data = []byte(ReplaceVariables(string(iiv.Template.Data), v, &iv))
-					Servers[i].Scripts[ii].CMD[iii].Template.Local = ReplaceVariables(iiv.Template.Local, v, &iv)
-					Servers[i].Scripts[ii].CMD[iii].Template.Remote = ReplaceVariables(iiv.Template.Remote, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].Template.Src = ReplaceVariables(iiv.Template.Src, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].Template.Dst = ReplaceVariables(iiv.Template.Dst, v, &iv)
 				}
 				if iiv.Run != "" {
 					Servers[i].Scripts[ii].CMD[iii].Run = ReplaceVariables(iiv.Run, v, &iv)
 				}
 				if iiv.File != nil {
-					Servers[i].Scripts[ii].CMD[iii].File.Local = ReplaceVariables(iiv.File.Local, v, &iv)
-					Servers[i].Scripts[ii].CMD[iii].File.Remote = ReplaceVariables(iiv.File.Remote, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].File.Src = ReplaceVariables(iiv.File.Src, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].File.Dst = ReplaceVariables(iiv.File.Dst, v, &iv)
 				}
 			}
 		}
