@@ -62,6 +62,7 @@ type CMD struct {
 	Hostname string
 	Filter   string
 	Async    bool
+	Local  	 bool 
 
 	// Experimental
 	Conn *ssh.Client

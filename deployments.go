@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,18 @@ func (c *CMD) Execute() {
 
 	fmt.Fprint(c.StdIn, c.Run+" 2> /tmp/"+id+".err 1> /tmp/"+id+".out;if [ -s /tmp/"+id+".err ];then cat /tmp/"+id+".err <(echo "+CloseTag+") >&2;else cat /tmp/"+id+".out <(echo "+CloseTag+");fi;rm /tmp/"+id+".*;\n")
 	// fmt.Fprint(c.StdIn, c.Run+" &> /tmp/"+id+".out; cat /tmp/"+id+".out <(echo "+CloseTag+");rm /tmp/"+id+".out;\n")
+}
+
+func (c *CMD) ExecuteLocal(){ 
+	cmd := exec.Command("sh", "-c", c.Run)
+	
+	output, err := cmd.CombinedOutput()
+    if err != nil {
+        fmt.Println("Error executing command:", err)
+        return
+    }
+
+		fmt.Println(string(output))
 }
 
 func (c *CMD) CopyTemplate(server *Server) {
@@ -234,6 +247,11 @@ func OpenSessionsAndRunCommands(server *Server) {
 				if CMDFilter != iv.Filter && CMDFilter != "*" {
 					continue
 				}
+			}
+
+			if server.Scripts[i].CMD[ii].Local  { 
+				server.Scripts[i].CMD[ii].ExecuteLocal()
+				continue
 			}
 
 			server.Scripts[i].CMD[ii].Hostname = server.Hostname
