@@ -9,12 +9,22 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func NewSSHConfig(user, key string, timeout int, ignoreInsecure bool) (cfg *ssh.ClientConfig) {
+func NewSSHConfig(user, key string,	password string, timeout int, ignoreInsecure bool) (cfg *ssh.ClientConfig) {
 	cfg = new(ssh.ClientConfig)
 	cfg.User = user
-	cfg.Auth = []ssh.AuthMethod{
-		PrivateKey(key),
+
+	if password != "" { 
+		cfg.Auth = []ssh.AuthMethod{
+			ssh.Password(password), 
+		}
 	}
+
+	if key != "" {
+		cfg.Auth = []ssh.AuthMethod{
+			PrivateKey(key),
+		}
+	}
+	
 	if ignoreInsecure {
 		cfg.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 	}

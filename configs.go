@@ -104,9 +104,9 @@ func LoadTemplates(path string) {
 		for ii, iv := range v.Scripts {
 			for iii, iiv := range iv.CMD {
 				if iiv.Template != nil {
-					data, err := os.ReadFile(iiv.Template.Local)
+					data, err := os.ReadFile(iiv.Template.Src)
 					if err != nil {
-						log.Println("Could not find config template file:", iiv.Template.Local)
+						log.Println("Could not find config template file:", iiv.Template.Src)
 						os.Exit(1)
 					}
 					Servers[i].Scripts[ii].CMD[iii].Template.Data = make([]byte, len(data))
