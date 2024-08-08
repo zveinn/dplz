@@ -40,7 +40,7 @@ var serversFlag = flagConfig{
 }
 
 var varsFlag = flagConfig{
-	Flag:      "variables",
+	Flag:      "vars",
 	Shorthand: "v",
 	Usage:     "The path to your variables file",
 }
@@ -104,9 +104,9 @@ func main() {
 	if Deployment.Server == "" || Deployment.Script == "" {
 		color.Red("One or flags are missing, please verify your command line arguments..")
 		fmt.Println()
-		fmt.Println("-s=" + Deployment.Server)
-		fmt.Println("-sc=" + Deployment.Script)
-		fmt.Println("-v=" + Deployment.Vars)
+		fmt.Println("-server=" + Deployment.Server)
+		fmt.Println("-script=" + Deployment.Script)
+		fmt.Println("-vars=" + Deployment.Vars)
 		fmt.Println()
 		os.Exit(1)
 	}
