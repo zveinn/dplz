@@ -1,20 +1,69 @@
 {
-    "tag": "Echo script",
-    "filter": "echo",
-    "variables": {
-        "name": "random var !",
-        "testVariable": "Here is some random text you can inject into a file..."
-    },
-    "cmd": [
-        {
-            "run": "echo {[server.ip]}",
-            "async": true
-        },
-        {
-            "run": "echo {[script.variables.name]}"
-        },
-        {
-            "run": "ech 'this will fail'"
-        }
-    ]
+	"tag": "Echo script",
+	"filter": "echo",
+	"variables": {
+		"tag": "tag from script file"
+	},
+	"cmd": [
+		{
+			"run": "uname -a",
+			"filter": "uname",
+			"async": true
+		},
+		{
+			"run": "touch /opt/test1",
+			"async": true
+		},
+		{
+			"run": "echo '{[server.ip]}' >> /opt/test1",
+			"async": true
+		},
+		{
+			"run": "echo '{[server.variables.tag]}' >> /opt/test1",
+			"async": true
+		},
+		{
+			"run": "echo '{[tag]}' >> /opt/test1",
+			"async": true
+		},
+		{
+			"run": "echo '{[script.variables.tag]}' >> /opt/test1",
+			"async": true
+		},
+		{
+			"run": "ech 'this will fail'",
+			"async": true
+		},
+		{
+			"run": "rm -R /opt/meow.conf",
+			"async": false
+		},
+		{
+			"template": {
+				"local": "files/webserver.template.conf",
+				"remote": "/opt/meow.conf",
+				"mode": "0777"
+			},
+			"filter": "config",
+			"async": true
+		},
+		{
+			"run": "rm -R /opt/meow",
+			"async": false
+		},
+		{
+			"file": {
+				"local": "files/meow",
+				"remote": "/opt/meow",
+				"mode": "0777"
+			},
+			"filter": "meow",
+			"async": true
+		},
+		{
+			"run": "touch /root/.hushlogin",
+			"filter": "hush",
+			"async": true
+		}
+	]
 }

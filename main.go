@@ -27,28 +27,22 @@ type flagConfig struct {
 	Value string
 }
 
-var projectFlag = flagConfig{
-	Flag:      "project",
-	Shorthand: "p",
-	Usage:     "The path to your project files (not needed if using a deployment file)",
-}
-
-var deploymentFlag = flagConfig{
-	Flag:      "deployment",
-	Shorthand: "d",
-	Usage:     "The path to your deployment file",
+var scriptFlag = flagConfig{
+	Flag:      "script",
+	Shorthand: "sc",
+	Usage:     "The path to your script file",
 }
 
 var serversFlag = flagConfig{
 	Flag:      "servers",
 	Shorthand: "s",
-	Usage:     "The path to your server files (not needed if using a deployment file)",
+	Usage:     "The path to your server file",
 }
 
 var varsFlag = flagConfig{
 	Flag:      "variables",
 	Shorthand: "v",
-	Usage:     "The path to your variables file (not needed if using a deployment file)",
+	Usage:     "The path to your variables file",
 }
 
 var filterFlag = flagConfig{
@@ -60,10 +54,8 @@ var filterFlag = flagConfig{
 var ignorePrompt bool
 
 func init() {
-	flag.StringVar(&projectFlag.Value, projectFlag.Flag, "", projectFlag.Usage)
-	flag.StringVar(&projectFlag.Value, projectFlag.Shorthand, "", projectFlag.Usage+" (shorthand)")
-	flag.StringVar(&deploymentFlag.Value, deploymentFlag.Flag, "", deploymentFlag.Usage)
-	flag.StringVar(&deploymentFlag.Value, deploymentFlag.Shorthand, "", deploymentFlag.Usage+" (shorthand)")
+	flag.StringVar(&scriptFlag.Value, scriptFlag.Flag, "", scriptFlag.Usage)
+	flag.StringVar(&scriptFlag.Value, scriptFlag.Shorthand, "", scriptFlag.Usage+" (shorthand)")
 	flag.StringVar(&serversFlag.Value, serversFlag.Flag, "", serversFlag.Usage)
 	flag.StringVar(&serversFlag.Value, serversFlag.Shorthand, "", serversFlag.Usage+" (shorthand)")
 	flag.StringVar(&varsFlag.Value, varsFlag.Flag, "", varsFlag.Usage)
@@ -99,40 +91,39 @@ func main() {
 		CMDFilter = splitFilter[1]
 	}
 	Deployment = new(D)
-	if deploymentFlag.Value != "" {
-		LoadDeployments(deploymentFlag.Value)
-	}
 
 	if serversFlag.Value != "" {
-		Deployment.Servers = serversFlag.Value
+		Deployment.Server = serversFlag.Value
 	}
 	if varsFlag.Value != "" {
 		Deployment.Vars = varsFlag.Value
 	}
-	if projectFlag.Value != "" {
-		Deployment.Project = projectFlag.Value
+	if scriptFlag.Value != "" {
+		Deployment.Script = scriptFlag.Value
 	}
-	if Deployment.Servers == "" || Deployment.Project == "" {
+	if Deployment.Server == "" || Deployment.Script == "" {
 		color.Red("One or flags are missing, please verify your command line arguments..")
 		fmt.Println()
-		fmt.Println("-servers=" + Deployment.Servers)
-		fmt.Println("-project=" + Deployment.Project)
+		fmt.Println("-s=" + Deployment.Server)
+		fmt.Println("-sc=" + Deployment.Script)
+		fmt.Println("-v=" + Deployment.Vars)
 		fmt.Println()
 		os.Exit(1)
 	}
-	LoadServers(Deployment.Servers)
-	LoadServices(Deployment.Project)
+
+	LoadServers(Deployment.Server)
+	LoadScript(Deployment.Script)
 	LoadVariables(Deployment.Vars)
-	LoadTemplates(Deployment.Project)
+	LoadTemplates(Deployment.Script)
 	InjectVariables()
 
 	if !ignorePrompt {
 		fmt.Println()
 		color.Green("You are about to run this deployment")
 		fmt.Println()
-		fmt.Println(color.GreenString("Servers:"), Deployment.Servers)
-		fmt.Println(color.GreenString("Project"), Deployment.Project)
-		fmt.Println(color.GreenString("Variables File:"), Deployment.Vars)
+		fmt.Println(color.GreenString("Server:"), Deployment.Server)
+		fmt.Println(color.GreenString("Script:"), Deployment.Script)
+		fmt.Println(color.GreenString("Variables:"), Deployment.Vars)
 		fmt.Println()
 		fmt.Println("Press N to cancel ..")
 		input := bufio.NewScanner(os.Stdin)
@@ -144,9 +135,9 @@ func main() {
 		fmt.Println()
 		color.Green("Running deployment")
 		fmt.Println()
-		fmt.Println(color.GreenString("Servers:"), Deployment.Servers)
-		fmt.Println(color.GreenString("Project"), Deployment.Project)
-		fmt.Println(color.GreenString("Variables File:"), Deployment.Vars)
+		fmt.Println(color.GreenString("Server:"), Deployment.Server)
+		fmt.Println(color.GreenString("Script:"), Deployment.Script)
+		fmt.Println(color.GreenString("Variables:"), Deployment.Vars)
 		fmt.Println()
 	}
 
