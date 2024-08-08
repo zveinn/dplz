@@ -8,17 +8,19 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-var Servers []*Server
-var Variables = make(map[string]string)
-var Deployment *D
-var ParseWaitGroup = sync.WaitGroup{}
-var CloseTag = "lkajbdflkajbdslkfbalkdfdeploy"
-var CMDFilter string
-var ScriptFilter string
+var (
+	Servers        []*Server
+	Variables      = make(map[string]string)
+	Deployment     *D
+	ParseWaitGroup = sync.WaitGroup{}
+	CloseTag       = "lkajbdflkajbdslkfbalkdfdeploy"
+	CMDFilter      string
+	ScriptFilter   string
+)
 
 type D struct {
-	Servers   string
-	Project   string
+	Server    string
+	Script    string
 	Vars      string
 	Variables map[string]string
 }
@@ -62,7 +64,7 @@ type CMD struct {
 	Hostname string
 	Filter   string
 	Async    bool
-	Local  	 bool 
+	Local    bool
 
 	// Experimental
 	Conn *ssh.Client
@@ -81,18 +83,18 @@ type CMD struct {
 	Session *ssh.Session
 }
 type File struct {
-	Src  string
-	Dst string
+	Local  string
+	Remote string
 	Mode   string
 }
 type Template struct {
-	Src  string
-	Dst string
+	Local  string
+	Remote string
 	Data   []byte
 	Mode   string
 }
 type Direcotry struct {
 	Src  string
-	Dst string
-	Mode   string
+	Dst  string
+	Mode string
 }

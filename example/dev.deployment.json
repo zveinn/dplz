@@ -1,8 +1,0 @@
-{
-    "servers": ".",
-    "project": ".",
-    "vars": "dev.variables.json",
-    "variables": {
-        "name": "Random deployment variables !"
-    }
-}

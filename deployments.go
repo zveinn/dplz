@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,56 +21,105 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func (c *CMD) Execute() {
-	c.ID = uuid.New()
-	id := ReplaceInUUID(c.ID.String())
-	c.SetBuffersAndOpenShell()
-	// keeping this one just in case ...
-	// log.Println("executing..")
-	// err := c.Session.Run(c.Run)
-	// if err != nil {
-	// 	log.Println(err, err.Error())
-	// 	fmt.Fprint(c.StdIn, err.Error(), CloseTag)
-	// }
+func readFromBuffers(c *CMD) {
+	for {
+		select {
+		case msg, ok := <-c.StdOut.Buffer:
+			if !ok {
+				continue
+			}
 
-	fmt.Fprint(c.StdIn, c.Run+" 2> /tmp/"+id+".err 1> /tmp/"+id+".out;if [ -s /tmp/"+id+".err ];then cat /tmp/"+id+".err <(echo "+CloseTag+") >&2;else cat /tmp/"+id+".out <(echo "+CloseTag+");fi;rm /tmp/"+id+".*;\n")
-	// fmt.Fprint(c.StdIn, c.Run+" &> /tmp/"+id+".out; cat /tmp/"+id+".out <(echo "+CloseTag+");rm /tmp/"+id+".out;\n")
+			fmt.Print("\n" + color.CyanString("OUT ("+c.Hostname+"): "+c.Run) + "\n" + string(msg) + "\n")
+		case msg, ok := <-c.StdErr.Buffer:
+			if !ok {
+				continue
+			}
+			fmt.Print(color.RedString("ERR ("+c.Hostname+"): "+c.Run) + "\n" + string(msg) + "\n")
+			// color.Red("ERR (" + c.Hostname + "): " + c.Run)
+			// fmt.Println(string(msg))
+		default:
+			// color.Green("FIN (" + c.Hostname + "): " + c.Run)
+			fmt.Print(color.GreenString("FIN ("+c.Hostname+"): "+c.Run) + "\n")
+			return
+		}
+	}
 }
 
-func (c *CMD) ExecuteLocal(){ 
-	cmd := exec.Command("sh", "-c", c.Run)
-	
-	output, err := cmd.CombinedOutput()
-    if err != nil {
-        fmt.Println("Error executing command:", err)
-        return
-    }
+func (c *CMD) Execute() {
+	defer func() {
+		r := recover()
+		if r != nil {
+			log.Println(r, string(debug.Stack()))
+		}
+		ParseWaitGroup.Done()
+	}()
 
-		fmt.Println(string(output))
+	c.ID = uuid.New()
+	err := c.Session.Run(c.Run)
+	if err != nil {
+	}
+	readFromBuffers(c)
+}
+
+func (c *CMD) ExecuteLocal() {
+	defer func() {
+		r := recover()
+		if r != nil {
+			log.Println(r, string(debug.Stack()))
+		}
+		ParseWaitGroup.Done()
+	}()
+
+	cmd := exec.Command("sh", "-c", c.Run)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println("Error executing command:", err)
+		return
+	}
+
+	fmt.Println(string(output))
 }
 
 func (c *CMD) CopyTemplate(server *Server) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			log.Println(r, string(debug.Stack()))
+		}
+		ParseWaitGroup.Done()
+	}()
+
 	c.ID = uuid.New()
-	c.Run = " TEMPLATE > " + c.Template.Src
-	c.SetBuffers()
+	c.Run = "TEMPLATE > " + c.Template.Local
 	err := os.WriteFile("/tmp/"+c.ID.String(), c.Template.Data, 0o644)
 	if err != nil {
-		fmt.Fprintf(&c.StdErr, err.Error()+" "+CloseTag+"\n")
+		fmt.Fprintf(&c.StdErr, err.Error()+"\n")
 		return
 	}
 
-	c.MoveFile("/tmp/"+c.ID.String(), c.Template.Dst, c.Template.Mode)
+	c.MoveFile("/tmp/"+c.ID.String(), c.Template.Remote, c.Template.Mode)
 
 	err = os.Remove("/tmp/" + c.ID.String())
 	if err != nil {
-		fmt.Fprintf(&c.StdErr, err.Error()+" "+CloseTag+"\n")
+		fmt.Fprintf(&c.StdErr, err.Error()+"\n")
 		return
 	}
 
-	fmt.Fprintf(&c.StdOut, c.Template.Src+" > "+c.Template.Dst+"\n"+CloseTag+"\n")
+	fmt.Fprintf(&c.StdOut, c.Template.Local+" > "+c.Template.Remote+"\n")
+
+	readFromBuffers(c)
 }
 
 func (c *CMD) CopyDirectory(server *Server) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			log.Println(r, string(debug.Stack()))
+		}
+		ParseWaitGroup.Done()
+	}()
+
 	c.ID = uuid.New()
 	c.Run = " DIRECTORY > " + c.Directory.Src
 	if _, err := os.Stat(c.Directory.Src); os.IsNotExist(err) {
@@ -77,14 +127,14 @@ func (c *CMD) CopyDirectory(server *Server) {
 		return
 	}
 
-	out, err := c.Session.CombinedOutput("stat " + c.Directory.Dst)
-	c.Session.Close()
-	c.NewSessionForCommand(c.Conn)
-	c.SetBuffers()
-	if err != nil {
-		fmt.Fprint(&c.StdErr, string(out), CloseTag)
-		return
-	}
+	// out, err := c.Session.CombinedOutput("stat " + c.Directory.Dst)
+	// c.Session.Close()
+	// c.NewSessionForCommand(c.Conn)
+	// c.SetBuffers()
+	// if err != nil {
+	// 	fmt.Fprint(&c.StdErr, string(out), CloseTag)
+	// 	return
+	// }
 
 	var preLevel int = 0
 	var level int = 0
@@ -158,10 +208,18 @@ func (c *CMD) CopyDirectory(server *Server) {
 }
 
 func (c *CMD) CopyFile(server *Server) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			log.Println(r, string(debug.Stack()))
+		}
+		ParseWaitGroup.Done()
+	}()
+
 	c.ID = uuid.New()
-	c.Run = " FILE > " + c.File.Src
-	c.SetBuffers()
-	c.MoveFile(c.File.Src, c.File.Dst, c.File.Mode)
+	c.Run = "FILE > " + c.File.Local
+	c.MoveFile(c.File.Local, c.File.Remote, c.File.Mode)
+	readFromBuffers(c)
 }
 
 func (c *CMD) MoveFile(src, dst, mode string) {
@@ -225,77 +283,71 @@ func OpenSessionsAndRunCommands(server *Server) {
 	}
 	server.Client = conn
 
-	for i := range server.Pre {
-		server.Pre[i].Hostname = server.Hostname
-		server.Pre[i].NewSessionForCommand(server.Client)
-		ParseWaitGroup.Add(1)
-		server.Pre[i].Execute()
-		CommandOutputHandler(&server.Pre[i], &ParseWaitGroup)
-	}
+	// for i := range server.Pre {
+	// 	server.Pre[i].Hostname = server.Hostname
+	// 	server.Pre[i].NewSessionForCommand(server.Client)
+	// 	ParseWaitGroup.Add(1)
+	// 	server.Pre[i].Execute()
+	// 	CommandOutputHandler(&server.Pre[i], &ParseWaitGroup)
+	// }
 
 	for i, s := range server.Scripts {
 		if ScriptFilter != "" {
 			if s.Filter != ScriptFilter && ScriptFilter != "*" {
-				// fmt.Println("SKIPPING: ", s.Filter, " .. ", ScriptFilter)
+				fmt.Println("SKIPPING: ", s.Filter, " .. ", ScriptFilter)
 				continue
 			}
 		}
 
 		for ii, iv := range s.CMD {
-			// log.Println("RUNNING:", ii, iv, CMDFilter)
 			if CMDFilter != "" {
 				if CMDFilter != iv.Filter && CMDFilter != "*" {
 					continue
 				}
 			}
 
-			if server.Scripts[i].CMD[ii].Local  { 
-				server.Scripts[i].CMD[ii].ExecuteLocal()
-				continue
+			doCMD := func(c *CMD) {
+				// log.Println("RUNNING:", c.File, c.Template, c.Filter)
+				c.Hostname = server.Hostname
+				err := c.NewSessionForCommand(server.Client)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				if c.Template != nil {
+					c.CopyTemplate(server)
+				} else if c.File != nil {
+					c.CopyFile(server)
+				} else if c.Directory != nil {
+					c.CopyDirectory(server)
+				} else if c.Local {
+					c.ExecuteLocal()
+				} else {
+					c.Execute()
+				}
 			}
 
-			server.Scripts[i].CMD[ii].Hostname = server.Hostname
-			server.Scripts[i].CMD[ii].NewSessionForCommand(server.Client)
 			ParseWaitGroup.Add(1)
-			if iv.Template != nil {
-				if iv.Async {
-					go server.Scripts[i].CMD[ii].CopyTemplate(server)
-				} else {
-					server.Scripts[i].CMD[ii].CopyTemplate(server)
-				}
-			} else if iv.File != nil {
-				if iv.Async {
-					go server.Scripts[i].CMD[ii].CopyFile(server)
-				} else {
-					server.Scripts[i].CMD[ii].CopyFile(server)
-				}
-			} else if iv.Directory != nil {
-				if iv.Async {
-					go server.Scripts[i].CMD[ii].CopyDirectory(server)
-				} else {
-					server.Scripts[i].CMD[ii].CopyDirectory(server)
-				}
-			} else {
-				if iv.Async {
-					go server.Scripts[i].CMD[ii].Execute()
-				} else {
-					server.Scripts[i].CMD[ii].Execute()
-				}
-			}
 			if iv.Async {
-				go CommandOutputHandler(&server.Scripts[i].CMD[ii], &ParseWaitGroup)
+				go doCMD(&server.Scripts[i].CMD[ii])
 			} else {
-				CommandOutputHandler(&server.Scripts[i].CMD[ii], &ParseWaitGroup)
+				doCMD(&server.Scripts[i].CMD[ii])
 			}
+
+			// if iv.Async {
+			// 	go CommandOutputHandler(&server.Scripts[i].CMD[ii], &ParseWaitGroup)
+			// } else {
+			// CommandOutputHandler(&server.Scripts[i].CMD[ii], &ParseWaitGroup)
+			// }
 		}
 	}
-	for i := range server.Post {
-		server.Post[i].Hostname = server.Hostname
-		server.Post[i].NewSessionForCommand(server.Client)
-		ParseWaitGroup.Add(1)
-		server.Post[i].Execute()
-		CommandOutputHandler(&server.Post[i], &ParseWaitGroup)
-	}
+	// for i := range server.Post {
+	// 	server.Post[i].Hostname = server.Hostname
+	// 	server.Post[i].NewSessionForCommand(server.Client)
+	// 	ParseWaitGroup.Add(1)
+	// 	server.Post[i].Execute()
+	// 	CommandOutputHandler(&server.Post[i], &ParseWaitGroup)
+	// }
 }
 
 func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
@@ -378,28 +430,28 @@ func CommandOutputHandler(cmd *CMD, wait *sync.WaitGroup) {
 
 func InjectVariables() {
 	for i, v := range Servers {
-		for ii, iv := range v.Pre {
-			Servers[i].Pre[ii].Run = ReplaceVariables(iv.Run, v, nil)
-		}
+		// for ii, iv := range v.Pre {
+		// 	Servers[i].Pre[ii].Run = ReplaceVariables(iv.Run, v, nil)
+		// }
 		for ii, iv := range v.Scripts {
 			for iii, iiv := range iv.CMD {
 				if iiv.Template != nil {
 					Servers[i].Scripts[ii].CMD[iii].Template.Data = []byte(ReplaceVariables(string(iiv.Template.Data), v, &iv))
-					Servers[i].Scripts[ii].CMD[iii].Template.Src = ReplaceVariables(iiv.Template.Src, v, &iv)
-					Servers[i].Scripts[ii].CMD[iii].Template.Dst = ReplaceVariables(iiv.Template.Dst, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].Template.Local = ReplaceVariables(iiv.Template.Local, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].Template.Remote = ReplaceVariables(iiv.Template.Remote, v, &iv)
 				}
 				if iiv.Run != "" {
 					Servers[i].Scripts[ii].CMD[iii].Run = ReplaceVariables(iiv.Run, v, &iv)
 				}
 				if iiv.File != nil {
-					Servers[i].Scripts[ii].CMD[iii].File.Src = ReplaceVariables(iiv.File.Src, v, &iv)
-					Servers[i].Scripts[ii].CMD[iii].File.Dst = ReplaceVariables(iiv.File.Dst, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].File.Local = ReplaceVariables(iiv.File.Local, v, &iv)
+					Servers[i].Scripts[ii].CMD[iii].File.Remote = ReplaceVariables(iiv.File.Remote, v, &iv)
 				}
 			}
 		}
-		for ii, iv := range v.Post {
-			Servers[i].Post[ii].Run = ReplaceVariables(iv.Run, v, nil)
-		}
+		// for ii, iv := range v.Post {
+		// 	Servers[i].Post[ii].Run = ReplaceVariables(iv.Run, v, nil)
+		// }
 		// for ii, iv := range v.Templates {
 		// 	Servers[i].Templates[ii] = []byte(ReplaceVariables(string(iv), v, nil))
 		// 	// log.Println("DATA:", i, string(Servers[i].Templates[ii]))
@@ -422,13 +474,13 @@ func ReplaceVariables(in string, server *Server, script *Script) (out string) {
 		out = strings.Replace(out, "{[server.variables."+i+"]}", v, -1)
 	}
 
-	for i, v := range Deployment.Variables {
-		out = strings.Replace(out, "{[deployment.variables."+i+"]}", v, -1)
-	}
+	// for i, v := range Deployment.Variables {
+	// 	out = strings.Replace(out, "{[deployment.variables."+i+"]}", v, -1)
+	// }
 
 	out = strings.Replace(out, "{[deployment.varFile]}", Deployment.Vars, -1)
-	out = strings.Replace(out, "{[deployment.project]}", Deployment.Project, -1)
-	out = strings.Replace(out, "{[deployment.servers]}", Deployment.Servers, -1)
+	out = strings.Replace(out, "{[deployment.project]}", Deployment.Script, -1)
+	out = strings.Replace(out, "{[deployment.servers]}", Deployment.Server, -1)
 
 	if script != nil {
 		for i, v := range script.Variables {

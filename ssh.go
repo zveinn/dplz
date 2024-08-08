@@ -9,13 +9,13 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func NewSSHConfig(user, key string,	password string, timeout int, ignoreInsecure bool) (cfg *ssh.ClientConfig) {
+func NewSSHConfig(user, key string, password string, timeout int, ignoreInsecure bool) (cfg *ssh.ClientConfig) {
 	cfg = new(ssh.ClientConfig)
 	cfg.User = user
 
-	if password != "" { 
+	if password != "" {
 		cfg.Auth = []ssh.AuthMethod{
-			ssh.Password(password), 
+			ssh.Password(password),
 		}
 	}
 
@@ -24,7 +24,7 @@ func NewSSHConfig(user, key string,	password string, timeout int, ignoreInsecure
 			PrivateKey(key),
 		}
 	}
-	
+
 	if ignoreInsecure {
 		cfg.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 	}
@@ -44,23 +44,7 @@ func PrivateKey(path string) ssh.AuthMethod {
 	return ssh.PublicKeys(signer)
 }
 
-func (c *CMD) SetBuffers() {
-	c.StdOut.Buffer = make(chan []byte, 10000000)
-	c.StdErr.Buffer = make(chan []byte, 10000000)
-
-	c.Session.Stdout = &c.StdOut
-	c.Session.Stderr = &c.StdErr
-	newSTDin, err := c.Session.StdinPipe()
-	if err != nil {
-		c.Session.Close()
-		log.Println("STDOUT:", err)
-		return
-	}
-	c.StdIn = newSTDin
-}
-
 func (c *CMD) SetBuffersAndOpenShell() {
-	c.SetBuffers()
 	// THE SHELL NEEDS TO BE LAST!
 	err := c.Session.Shell()
 	if err != nil {
@@ -68,12 +52,22 @@ func (c *CMD) SetBuffersAndOpenShell() {
 	}
 }
 
-func (c *CMD) NewSessionForCommand(conn *ssh.Client) {
+func (c *CMD) NewSessionForCommand(conn *ssh.Client) (err error) {
 	session, err := conn.NewSession()
 	if err != nil {
-		log.Println("Session error:", err)
-		return
+		return err
 	}
 	c.Session = session
 	c.Conn = conn
+	c.StdOut.Buffer = make(chan []byte, 10000000)
+	c.StdErr.Buffer = make(chan []byte, 10000000)
+	c.Session.Stdout = &c.StdOut
+	c.Session.Stderr = &c.StdErr
+	newSTDin, err := c.Session.StdinPipe()
+	if err != nil {
+		c.Session.Close()
+		return err
+	}
+	c.StdIn = newSTDin
+	return nil
 }
