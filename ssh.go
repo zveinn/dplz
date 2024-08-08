@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/opensourcez/logger"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -53,6 +54,12 @@ func (c *CMD) SetBuffersAndOpenShell() {
 }
 
 func (c *CMD) NewSessionForCommand(conn *ssh.Client) (err error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			logger.GenericError(logger.TypeCastRecoverInterface(r)).Log()
+		}
+	}()
 	session, err := conn.NewSession()
 	if err != nil {
 		return err

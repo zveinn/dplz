@@ -1,21 +1,10 @@
 {
-    "hostname": "googlecloud-dev-01",
-    "ip": "34.105.111.12",
-    "port": "44444",
-    "key": "/home/zhuffles/.ssh/gc",
-    "user": "sveinn",
-    "variables": {
-        "privateIP": "11.11.11.11",
-        "dns": "1.1.1.1"
-    },
-    "pre": [
-        {
-            "run": "ech 'This runs before all scripts'"
-        }
-    ],
-    "post": [
-        {
-            "run": "echo 'This runs after all script'"
-        }
-    ]
+	"hostname": "dns-01",
+	"ip": "dns-01",
+	"port": "22",
+	"key": "/root/.ssh/dns-01",
+	"user": "root",
+	"variables": {
+		"tag": "tag from server file"
+	}
 }
