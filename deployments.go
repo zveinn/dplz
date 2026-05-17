@@ -50,7 +50,16 @@ func (c *CMD) Execute() {
 	}()
 
 	c.ID = uuid.New()
-	_ = c.Session.Run(c.Run)
+
+	loop, _, isLoop := buildLoop(c.Run, "")
+	if isLoop {
+		err := c.Session.Run(strings.Join(loop, " && "))
+		if err != nil {
+			fmt.Println(c.Run, "> ERR:", err)
+		}
+	} else {
+		_ = c.Session.Run(c.Run)
+	}
 	readFromBuffers(c)
 }
 
@@ -62,16 +71,24 @@ func (c *CMD) ExecuteLocal() {
 		}
 		ParseWaitGroup.Done()
 	}()
-
-	cmd := exec.Command("sh", "-c", c.Run)
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Println("Error executing command:", err)
-		return
+	loop, _, isLoop := buildLoop(c.Run, "")
+	if isLoop {
+		cmd := exec.Command("sh", "-c", strings.Join(loop, " && "))
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Error executing command:", err)
+			return
+		}
+		fmt.Println(string(output))
+	} else {
+		cmd := exec.Command("sh", "-c", c.Run)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Println("Error executing command:", err)
+			return
+		}
+		fmt.Println(string(output))
 	}
-
-	fmt.Println(string(output))
 }
 
 func (c *CMD) CopyTemplate(server *Server) {
@@ -200,10 +217,28 @@ func (c *CMD) CopyFile(server *Server) {
 		ParseWaitGroup.Done()
 	}()
 
-	c.ID = uuid.New()
-	c.Run = "FILE > " + c.File.Local
-	c.MoveFile(c.File.Local, c.File.Remote, c.File.Mode)
-	readFromBuffers(c)
+	loop, loop2, isLoop := buildLoop(c.File.Local, c.File.Remote)
+	if isLoop {
+		for i, v := range loop {
+			err := c.NewSessionForCommand(server.Client)
+			c.Run = "FILE > " + v
+			c.ID = uuid.New()
+			if err != nil {
+				panic(err)
+			}
+			c.MoveFile(v, loop2[i], c.File.Mode)
+			readFromBuffers(c)
+		}
+	} else {
+		err := c.NewSessionForCommand(server.Client)
+		if err != nil {
+			panic(err)
+		}
+		c.Run = "FILE > " + c.File.Local
+		c.ID = uuid.New()
+		c.MoveFile(c.File.Local, c.File.Remote, c.File.Mode)
+		readFromBuffers(c)
+	}
 }
 
 func (c *CMD) MoveFile(src, dst, mode string) {
@@ -294,19 +329,27 @@ func OpenSessionsAndRunCommands(server *Server) {
 				}()
 				// log.Println("RUNNING:", c.File, c.Template, c.Filter)
 				c.Hostname = server.Hostname
-				err := c.NewSessionForCommand(server.Client)
-				if err != nil {
-					panic(err)
-				}
 				if c.Template != nil {
+					err := c.NewSessionForCommand(server.Client)
+					if err != nil {
+						panic(err)
+					}
 					c.CopyTemplate(server)
 				} else if c.File != nil {
 					c.CopyFile(server)
 				} else if c.Directory != nil {
 					c.CopyDirectory(server)
 				} else if c.Local {
+					err := c.NewSessionForCommand(server.Client)
+					if err != nil {
+						panic(err)
+					}
 					c.ExecuteLocal()
 				} else {
+					err := c.NewSessionForCommand(server.Client)
+					if err != nil {
+						panic(err)
+					}
 					c.Execute()
 				}
 			}
@@ -380,4 +423,51 @@ func (c *ChannelWriter) Write(buf []byte) (n int, err error) {
 		err = errors.New("COULD NOT WRITE ON CHANNEL")
 	}
 	return len(b), err
+}
+
+func buildLoop(s1 string, s2 string) (loop []string, loop2 []string, isLoop bool) {
+	loop = make([]string, 0)
+	s1Index := strings.Index(s1, "{[")
+	if s1Index == -1 {
+		return nil, nil, false
+	}
+	s1Index2 := strings.Index(s1, "]}")
+	if s1Index2 == -1 {
+		return nil, nil, false
+	}
+	s2Index := strings.Index(s2, "{[")
+	if s1Index == -1 && s2 != "" {
+		return nil, nil, false
+	}
+	s2Index2 := strings.Index(s2, "]}")
+	if s1Index2 == -1 && s2 != "" {
+		return nil, nil, false
+	}
+	numb := strings.Split(s1[s1Index+2:s1Index2], "..")
+	if len(numb) != 2 {
+		return nil, nil, false
+	}
+	isLoop = true
+	firstNum, err := strconv.Atoi(numb[0])
+	if err != nil {
+		fmt.Println("invalid loop number:", numb[0])
+	}
+	secondNum, err := strconv.Atoi(numb[1])
+	if err != nil {
+		fmt.Println("invalid loop number:", numb[1])
+	}
+	count := 0
+	for count <= secondNum {
+		if count < firstNum {
+			count++
+			continue
+		}
+		loop = append(loop, strings.ReplaceAll(s1, s1[s1Index:s1Index2+2], strconv.Itoa(count)))
+		if s2 != "" {
+			loop2 = append(loop2, strings.ReplaceAll(s2, s2[s2Index:s2Index2+2], strconv.Itoa(count)))
+		}
+		count++
+	}
+
+	return
 }
