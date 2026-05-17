@@ -219,15 +219,28 @@ func (c *CMD) CopyFile(server *Server) {
 
 	loop, loop2, isLoop := buildLoop(c.File.Local, c.File.Remote)
 	if isLoop {
-		for i, v := range loop {
-			err := c.NewSessionForCommand(server.Client)
-			c.Run = "FILE > " + v
-			c.ID = uuid.New()
-			if err != nil {
-				panic(err)
+		if len(loop) > 0 && len(loop2) > 0 {
+			for i, v := range loop {
+				err := c.NewSessionForCommand(server.Client)
+				c.Run = "FILE > " + v
+				c.ID = uuid.New()
+				if err != nil {
+					panic(err)
+				}
+				c.MoveFile(v, loop2[i], c.File.Mode)
+				readFromBuffers(c)
 			}
-			c.MoveFile(v, loop2[i], c.File.Mode)
-			readFromBuffers(c)
+		} else {
+			for _, v := range loop2 {
+				err := c.NewSessionForCommand(server.Client)
+				c.Run = "FILE > " + v
+				c.ID = uuid.New()
+				if err != nil {
+					panic(err)
+				}
+				c.MoveFile(c.File.Local, v, c.File.Mode)
+				readFromBuffers(c)
+			}
 		}
 	} else {
 		err := c.NewSessionForCommand(server.Client)
@@ -427,46 +440,78 @@ func (c *ChannelWriter) Write(buf []byte) (n int, err error) {
 
 func buildLoop(s1 string, s2 string) (loop []string, loop2 []string, isLoop bool) {
 	loop = make([]string, 0)
+	s1isloop := 0
+	s2isloop := 0
 	s1Index := strings.Index(s1, "{[")
-	if s1Index == -1 {
-		return nil, nil, false
+	if s1Index > -1 {
+		s1isloop++
 	}
 	s1Index2 := strings.Index(s1, "]}")
-	if s1Index2 == -1 {
-		return nil, nil, false
+	if s1Index2 > -1 {
+		s1isloop++
 	}
 	s2Index := strings.Index(s2, "{[")
 	if s1Index == -1 && s2 != "" {
-		return nil, nil, false
+		s2isloop++
 	}
 	s2Index2 := strings.Index(s2, "]}")
 	if s1Index2 == -1 && s2 != "" {
-		return nil, nil, false
+		s2isloop++
 	}
-	numb := strings.Split(s1[s1Index+2:s1Index2], "..")
-	if len(numb) != 2 {
+	if s1isloop != 2 && s2isloop != 2 {
 		return nil, nil, false
 	}
 	isLoop = true
-	firstNum, err := strconv.Atoi(numb[0])
-	if err != nil {
-		fmt.Println("invalid loop number:", numb[0])
-	}
-	secondNum, err := strconv.Atoi(numb[1])
-	if err != nil {
-		fmt.Println("invalid loop number:", numb[1])
-	}
-	count := 0
-	for count <= secondNum {
-		if count < firstNum {
+
+	numbs1 := make([]string, 0)
+	numbs2 := make([]string, 0)
+
+	if s1isloop == 2 {
+		numbs1 = strings.Split(s1[s1Index+2:s1Index2], "..")
+		if len(numbs1) != 2 {
+			return nil, nil, false
+		}
+		firstNum, err := strconv.Atoi(numbs1[0])
+		if err != nil {
+			fmt.Println("invalid loop number:", numbs1[0])
+		}
+		secondNum, err := strconv.Atoi(numbs1[1])
+		if err != nil {
+			fmt.Println("invalid loop number:", numbs1[1])
+		}
+
+		count := 0
+		for count <= secondNum {
+			if count < firstNum {
+				count++
+				continue
+			}
+			loop = append(loop, strings.ReplaceAll(s1, s1[s1Index:s1Index2+2], strconv.Itoa(count)))
 			count++
-			continue
 		}
-		loop = append(loop, strings.ReplaceAll(s1, s1[s1Index:s1Index2+2], strconv.Itoa(count)))
-		if s2 != "" {
+	} else if s2isloop == 2 {
+		numbs2 = strings.Split(s2[s2Index+2:s2Index2], "..")
+		if len(numbs1) != 2 {
+			return nil, nil, false
+		}
+
+		firstNum, err := strconv.Atoi(numbs2[0])
+		if err != nil {
+			fmt.Println("invalid loop number:", numbs2[0])
+		}
+		secondNum, err := strconv.Atoi(numbs2[1])
+		if err != nil {
+			fmt.Println("invalid loop number:", numbs2[1])
+		}
+		count := 0
+		for count <= secondNum {
+			if count < firstNum {
+				count++
+				continue
+			}
 			loop2 = append(loop2, strings.ReplaceAll(s2, s2[s2Index:s2Index2+2], strconv.Itoa(count)))
+			count++
 		}
-		count++
 	}
 
 	return
