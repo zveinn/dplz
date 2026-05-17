@@ -227,6 +227,7 @@ func (c *CMD) CopyFile(server *Server) {
 				if err != nil {
 					panic(err)
 				}
+				fmt.Println(v, loop2[i])
 				c.MoveFile(v, loop2[i], c.File.Mode)
 				readFromBuffers(c)
 			}
@@ -238,6 +239,7 @@ func (c *CMD) CopyFile(server *Server) {
 				if err != nil {
 					panic(err)
 				}
+				fmt.Println(c.File.Local, v)
 				c.MoveFile(c.File.Local, v, c.File.Mode)
 				readFromBuffers(c)
 			}
@@ -455,11 +457,11 @@ func buildLoop(s1 string, s2 string) (loop []string, loop2 []string, isLoop bool
 		s1isloop++
 	}
 	s2Index := strings.Index(s2, "{[")
-	if s1Index == -1 && s2 != "" {
+	if s2Index > -1 {
 		s2isloop++
 	}
 	s2Index2 := strings.Index(s2, "]}")
-	if s1Index2 == -1 && s2 != "" {
+	if s2Index2 > -1 {
 		s2isloop++
 	}
 	if s1isloop != 2 && s2isloop != 2 {
@@ -495,7 +497,7 @@ func buildLoop(s1 string, s2 string) (loop []string, loop2 []string, isLoop bool
 		}
 	} else if s2isloop == 2 {
 		numbs2 = strings.Split(s2[s2Index+2:s2Index2], "..")
-		if len(numbs1) != 2 {
+		if len(numbs2) != 2 {
 			return nil, nil, false
 		}
 
