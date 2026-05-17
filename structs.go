@@ -58,6 +58,7 @@ type CMD struct {
 	ID   uuid.UUID
 	Done bool
 	Run  string
+	Skip bool
 
 	Out      string
 	Success  bool

@@ -331,6 +331,10 @@ func OpenSessionsAndRunCommands(server *Server) {
 				if CMDFilter != iv.Filter && CMDFilter != "*" {
 					continue
 				}
+			} else {
+				if iv.Skip {
+					continue
+				}
 			}
 
 			doCMD := func(c *CMD) {
