@@ -495,7 +495,8 @@ func buildLoop(s1 string, s2 string) (loop []string, loop2 []string, isLoop bool
 			loop = append(loop, strings.ReplaceAll(s1, s1[s1Index:s1Index2+2], strconv.Itoa(count)))
 			count++
 		}
-	} else if s2isloop == 2 {
+	}
+	if s2isloop == 2 {
 		numbs2 = strings.Split(s2[s2Index+2:s2Index2], "..")
 		if len(numbs2) != 2 {
 			return nil, nil, false
