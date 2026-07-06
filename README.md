@@ -6,94 +6,81 @@ Dplz is capable of running shell commands and copying any type of file or direct
 
 # On the horizon
 0. Basic tests
-1. Localhost support
-2. More advanced filtering
-3. Verbose output mode
+1. More advanced filtering
+2. Verbose output mode
+3. Pre/Post script hooks
 4. [insert your suggestion here]
 
 # How to install
 ```bash
-# Get the project using go get
-$ go get github.com/zveinn/dplz
-# use go to install
-$ go install .
+# Download a pre-built binary (linux/macos) from the releases page
+# https://github.com/zveinn/dplz/releases
+
+# .. or build from source
+$ git clone https://github.com/zveinn/dplz
+$ cd dplz
+$ go build -o dplz .
 ```
 
 # How to get started
 1. [Define a server](#Defining-servers)
     - Server files can be located anywhere you please
-2. [Define a deployment (optional)](#Defining-deployments)
-    - Deployment files can be located anywhere you please
-3. [Define variables](#Defining-variables)
+2. [Define variables (optional)](#Defining-variables)
     - Variable files can be located anywhere you please
-4. [Define a script](#Defining-scripts)
-    - Script files need to be located within your project directory
-5. [Run a deployment](#Defining-a-server)
+3. [Define a script](#Defining-scripts)
+    - Paths inside scripts are resolved relative to the directory you run dplz from
+4. [Run a deployment](#Running-deployments)
 
 # Running deployments
 ```bash
 # Just run a basic deployment
-$ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE]
-# Run a deployment and ignore warning prompt
-$ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE] -ignorePrompt
+$ dplz -servers=[PATH_TO_YOUR_SERVER_FILE] -script=[PATH_TO_YOUR_SCRIPT_FILE]
+# Run a deployment with variables
+$ dplz -servers=server.json -script=script.json -vars=vars.json
+# The same deployment using shorthand flags
+$ dplz -s server.json -sc script.json -v vars.json
+# Run a deployment and ignore the warning prompt
+$ dplz -s server.json -sc script.json -ignorePrompt
 # Run a deployment, ignore the warning prompt and use a filter.
-$ dplz -deployment=[PATH_TO_YOUR_DEPLOYMENT_FILE] -ignorePrompt -filter "script.cmd"
-
-# Run a deployment using command line arguments only.
-$ dplz -servers=[PATH_TO_SEVER_FOLDER] -project=[PATH_TO_PROJECT_FOLDER] -vars=[PATH_TO_VARIABLES_FILE]
+$ dplz -s server.json -sc script.json -ignorePrompt -filter "script.cmd"
 ```
-
+Before running, dplz prints a summary of the server, script and variable files and waits for confirmation. Press `N` (or `n`) to cancel, anything else continues. Use `-ignorePrompt` to skip this.
 
 # Command Line Arguments
-Command line arguments can be combined with deployment json files. If you do combine them, the command line arguments will overwrite the deployment file settings.
+The `servers` and `script` flags are required, everything else is optional.
 ```go
-	flag.String("deployment", "", "The path to your deployment file")
-	flag.String("project", "", "The path to your project files (not needed if using a deployment file)")
-	flag.String("servers", "", "The path to your server files (not needed if using a deployment file)")
-	flag.String("vars", "", "The path to your variables file (not needed if using a deployment file)")
+	flag.String("script", "", "The path to your script file")               // shorthand: -sc
+	flag.String("servers", "", "The path to your server file")              // shorthand: -s
+	flag.String("vars", "", "The path to your variables file")              // shorthand: -v
+	flag.String("filter", "", "Only scripts or commands with this tag will be executed. Example: SCRIPT.CMD ") // shorthand: -f
 	flag.Bool("ignorePrompt", false, "Add this flag to skip the confirmation prompt")
-	flag.String("filter", "", "Only scripts or commands with this tag will be executed. Example: SCRIPT.CMD ")
 ```
 
 # Defining servers
 Before you define any deployments you need to define a target server. <br>
-Each server object contains some basic connections information, custom variables and PRE/POST scripts. <br>
-- Variables are accessable in commands and tamplates.
-- Pre scripts will run BEFORE any other scripts run on that server
-- Post scripts will run AFTER all scripts have been executed.
+Each server object contains some basic connection information and custom variables. <br>
+- Variables are accessible in commands and templates as `{[server.variables.NAME]}`
+- Authentication is done with a private key (`key`) or a password (`password`). If both are set, the key is used.
+- Host key verification is skipped and the connection timeout is 10 seconds.
 ```json
 {
     "hostname": "googlecloud-dev-01",
     "ip": "131.161.181.11",
     "port": "22",
     "key": "/home/user/.ssh/ssh-key",
+    "password": "",
     "user": "root",
     "variables": {
         "privateIP": "11.11.11.11",
         "dns": "1.1.1.1"
-    },
-    "pre": [
-        {"run": "echo 'This runs before all the scripts'"}
-    ],
-    "post": [
-        {"run": "echo 'This runs after all the scripts'"}
-    ]
+    }
 }
 ```
 
 # Defining deployments
-This part is purely optional. You can input all of the below parameters as command line arguments as well. But for the sake of replicating deployments we decided to add this "highest level object". <br>
-A Deployment will define the location of your server json files, project json files and the variables json file.
-- NOTE: Deployment wide variables are only configurable inside a deployment json file
-```json
-{
-    "servers": "PATH_TO_YOUR_SERVER_FOLDER",
-    "project": "PATH_TO_YOUR_PROJECT_FOLDER",
-    "vars": "PATH_TO_YOUR_VARIABLES_FILE",
-    "variables": {
-        "example": "This is an example custom variable"
-    }
-}
+Deployment files have been removed. The server, script and variable file paths are now given directly as command line arguments, which makes a deployment fully described by the command that runs it:
+```bash
+$ dplz -s cloud-dev.server.json -sc basic.script.json -v dev.variables.json
 ```
 
 # Defining variables
@@ -106,12 +93,28 @@ Variables are defined in a json file and the `vars` flag is used to load variabl
     "sqlIP": "192.168.0.67"
 }
 ```
+Variables are injected into `run` commands, `file` paths, `template` paths and the contents of template files using the `{[name]}` syntax. The following variables are always available:
+- `{[NAME]}` .. any variable from the variables file
+- `{[server.ip]}` `{[server.port]}` `{[server.user]}` `{[server.key]}` `{[server.hostname]}`
+- `{[server.variables.NAME]}` .. variables from the server file
+- `{[script.variables.NAME]}` .. variables from the script file
+- `{[script.tag]}` .. the script name
+- `{[deployment.servers]}` `{[deployment.project]}` `{[deployment.varFile]}` .. the paths given on the command line (project = script)
 
 # Defining scripts
-This is a basic script, it will contain some variables and commands to execute. There are three types of commands:
-1. Run - Only runs a commands on the server
+This is a basic script, it will contain some variables and commands to execute. There are four types of commands:
+1. Run - Runs a command on the server
 2. File - Copies a file AS IS to the server (follows SCP syntax)
 3. Template - Copies a file AND replaces variables (follows SCP syntax)
+4. Directory - Recursively copies the contents of a directory to the server (follows SCP syntax)
+
+Every command supports these options:
+- `filter` .. a tag used to select the command with the `-filter` flag
+- `async` .. run the command in the background, ordering is no longer guaranteed
+- `local` .. run the command on the local machine (using `sh -c`) instead of the server
+- `skip` .. skip the command by default; it only runs when a `-filter` matching it is given
+
+NOTE: `file` and `template` use `local`/`remote` keys, while `directory` uses `src`/`dst`.
 
 ```json
 {
@@ -124,8 +127,8 @@ This is a basic script, it will contain some variables and commands to execute. 
     "cmd": [
         {
             "template": {
-                "src": "files/webserver.template.conf",
-                "dst": "/home/sveinn/meow/test.template",
+                "local": "files/webserver.template.conf",
+                "remote": "/home/sveinn/meow/test.template",
                 "mode": "0777"
             },
             "filter": "templates",
@@ -133,8 +136,8 @@ This is a basic script, it will contain some variables and commands to execute. 
         },
         {
             "file": {
-                "src": "files/meow",
-                "dst": "/home/sveinn/meow/test.file",
+                "local": "files/meow",
+                "remote": "/home/sveinn/meow/test.file",
                 "mode": "0777"
             },
             "filter": "files",
@@ -160,6 +163,16 @@ This is a basic script, it will contain some variables and commands to execute. 
             "async": false
         },
         {
+            "run": "echo 'this only runs locally'",
+            "filter": "local",
+            "local": true
+        },
+        {
+            "run": "echo 'this only runs when a filter selects it'",
+            "filter": "manual",
+            "skip": true
+        },
+        {
             "run": "ls -la",
             "filter": "list"
         }
@@ -167,21 +180,41 @@ This is a basic script, it will contain some variables and commands to execute. 
 }
 ```
 
+# Loops
+Commands and file copies can be expanded into loops using the `{[start..end]}` syntax. The range is inclusive.
+
+Loop over a command (expands into a single `cmd1 && cmd2 && ..` execution):
+```json
+{ "run": "touch /home/sveinn/file-{[1..5]}" }
+```
+
+Copy one local file to many remote names:
+```json
+{ "file": { "local": "files/meow", "remote": "/home/sveinn/meow-{[1..3]}", "mode": "0777" } }
+```
+
+Copy many local files to many remote names (both ranges are paired index by index):
+```json
+{ "file": { "local": "files/meow-{[1..3]}", "remote": "/home/sveinn/meow-{[1..3]}", "mode": "0777" } }
+```
+Loops work in `run` commands (remote and local) and in `file` copies. A loop on only the local side of a `file` copy is not supported.
+
 # Ordering of scripts
-Scripts do not have any guarentee to be run in a particular order. The ordering is solely based on the directory walking machanism, which makes it non-dependable.
+A single script file is loaded per run. The commands within it are executed against every server, one server at a time.
 
 # Ordering of commands
 Commands present inside scripts will always be executed in order. Except if the async tag is specified, then ordering is not guaranteed for the commands flagged as async.
 
 # Filtering
-The filtering is currently a strict matching filter. The filter tag and the filter variables on the script or command need to match exactly.
+The `-filter` flag takes two parts separated by a dot: `SCRIPT_FILTER.CMD_FILTER`. The first part is matched against the `filter` field of the script, the second against the `filter` field of each command. Matching is strict, but either part can be replaced with `*` to match everything.
 
  Run a certain script and commands that match the filter
- -  `-filter scripts.cmd`
+ -  `-filter script.cmd`
 
- Run a certain set of commands inside all filters
+ Run a certain set of commands inside all scripts
  - `-filter *.cmd`
 
-Run all commands inside a scripts matching the filter
- - `-filter scripts.*`
+Run all commands inside a script matching the filter
+ - `-filter script.*`
 
+Commands marked with `"skip": true` are only executed when a filter selecting them is given.
