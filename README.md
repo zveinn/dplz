@@ -4,13 +4,6 @@ Dplz is capable of running shell commands and copying any type of file or direct
  <br> <br>
  Right now this software is in beta, but I would love for anyone and everyone to try it out and flood me with issues to work on.
 
-# On the horizon
-0. Basic tests
-1. More advanced filtering
-2. Verbose output mode
-3. Pre/Post script hooks
-4. [insert your suggestion here]
-
 # How to install
 ```bash
 # Download a pre-built binary (linux/macos) from the releases page
